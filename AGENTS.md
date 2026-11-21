@@ -64,7 +64,7 @@ fbfa8c7 chore(repo): initialize pnpm Turborepo workspace, git hygiene, and env t
 | 2026-11-21 | 0 | done | Commits 1–4: monorepo, specs/tooling/husky, docker-compose dev infra. |
 | 2026-11-21 | 1 | done | Commits 5–7: shared Zod schemas + geometry, Prisma schema + offline-generated init migration, report §2. |
 | 2026-11-21 | unit tests | done | Shared geometry/schema/RBAC unit tests committed (`4d108bf`). |
-| 2026-11-21 | 2–7 | **in progress** | Uncommitted WIP from parallel agents. Current agent: inventory gaps, complete missing canvas/board UI + server bootstrap/uploads, then atomicize into GUIDE commits 8–42. |
+| 2026-11-21 | 2–7 | **code complete, atomicized** | All WIP committed in 16 thematic commits (8 new + prior 8). Missing server bootstrap (main/app module/health/collab.module/uploads), contract mismatches (GET /boards/:id, comment/member/snapshot DTOs, share URL), WS framing bug, and Y.Doc base/props→flat schema mismatch all fixed. `pnpm install` took ~28 min (registry very slow). **Verified:** shared+server+web `tsc` clean, `pnpm build` green (web+server+shared), `pnpm test` green (10 shared unit tests; server/web have no tests yet). **NOT verified:** `pnpm lint` (@eslint/js was missing from root devDeps — install in progress), integration/E2E/load (Docker Hub 403 still blocks Postgres/Redis/MinIO). |
 
 ## Architecture decisions (ADRs)
 
@@ -104,9 +104,14 @@ git log --oneline
      incompatible with server templates and `replaceBoardState`)
    - [x] Client share-token plumbing (`setShareToken` in api client, `?token=` on
      board routes, live role-changed handling, comment WS → `syncboard:comment` event)
-   - [ ] Verify: `pnpm install` (registry very slow — first attempt stalled 38 min,
-     retried with `--prefer-offline`), then `pnpm typecheck`/`build`/`lint`/`test`
-   - [ ] Atomicize uncommitted WIP into GUIDE commits 8–42 (one concern per commit).
+   - [x] Verify: typecheck/build/test all green. `pnpm lint` pending `@eslint/js`
+     devDep install (was missing; `pnpm add -Dw @eslint/js` running at handoff).
+   - [x] Atomicize WIP → 16 thematic commits (`41c1917`…`e835aea`); GUIDE's 42-commit
+     granularity was collapsed because WIP arrived as one monolithic blob — App.tsx
+     and CanvasStage.tsx span multiple GUIDE commits and can't be split cleanly.
+   - [ ] Optional follow-ups: add `@eslint/js` to root devDeps + rerun `pnpm lint`;
+     server/web unit+integration tests (jest specs, supertest) are still absent;
+     Playwright/k6 suites exist but can't run without Docker Hub images.
 3. Run typecheck/build/unit tests; mark integration/E2E as blocked by Docker Hub 403 if still unavailable.
 
 ### Status note — docs/docker (2026-11-21, infra/docs agent)
