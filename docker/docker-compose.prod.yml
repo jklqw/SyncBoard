@@ -1,0 +1,165 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# COPY THIS FILE TO THE REPOSITORY ROOT AS docker-compose.prod.yml.
+#
+#   cp docker/docker-compose.prod.yml docker-compose.prod.yml
+#   cp .env.example .env    # then set real secrets
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Only Nginx publishes ports (80/443). Web, API/WS and data services live on
+# isolated networks and are reachable exclusively through the proxy.
+# ─────────────────────────────────────────────────────────────────────────────
+name: syncboard-prod
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    image: syncboard/nginx:1.0.0
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      web:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    networks:
+      - edge
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://127.0.0.1/health/nginx >/dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: syncboard/web:1.0.0
+    restart: unless-stopped
+    logging: *default-logging
+    expose:
+      - '8080'
+    networks:
+      - edge
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://127.0.0.1:8080/health/web >/dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    image: syncboard/server:1.0.0
+    restart: unless-stopped
+    logging: *default-logging
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://syncboard:${POSTGRES_PASSWORD:-syncboard}@postgres:5432/syncboard?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:-syncboard}@redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: '9000'
+      MINIO_USE_SSL: 'false'
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-syncboard}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-syncboarddev}
+      MINIO_BUCKET: ${MINIO_BUCKET:-syncboard-media}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    expose:
+      - '3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - edge
+      - data
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://127.0.0.1:3000/health >/dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: syncboard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-syncboard}
+      POSTGRES_DB: syncboard
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U syncboard -d syncboard']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      ['redis-server', '--appendonly', 'yes', '--requirepass', '${REDIS_PASSWORD:-syncboard}']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-syncboard}
+    volumes:
+      - redis-data:/data
+    networks:
+      - data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    logging: *default-logging
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-syncboard}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-syncboarddev}
+    volumes:
+      - minio-data:/data
+    networks:
+      - data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+networks:
+  edge: {}
+  data:
+    internal: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
