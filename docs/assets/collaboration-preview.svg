@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" width="1200" height="675" role="img" aria-labelledby="title desc">
+  <title id="title">Two collaborators editing the same architecture diagram</title>
+  <desc id="desc">Illustration of a warm-paper whiteboard with two named cursors, a selected connector and an architecture sketch. This is a hand-drawn vector illustration, not a captured demo.</desc>
+  <defs>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1.1" fill="#E4E2DD"/>
+    </pattern>
+    <style>
+      .ui { font: 500 13px Inter, -apple-system, 'Segoe UI', sans-serif; fill: #52525B; }
+      .label { font: 600 15px Inter, -apple-system, 'Segoe UI', sans-serif; fill: #18181B; }
+      .mono { font: 500 11px 'JetBrains Mono', ui-monospace, monospace; fill: #71717A; }
+      .card { fill: #FFFFFF; stroke: rgba(24,24,27,0.12); }
+      .select { fill: none; stroke: #2563EB; stroke-width: 1.5; stroke-dasharray: 5 4; }
+      .edge { fill: none; stroke: #A1A1AA; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="675" fill="#FAF9F6"/>
+  <rect width="1200" height="675" fill="url(#grid)"/>
+
+  <!-- App chrome: floating pills, deliberately quiet -->
+  <rect x="40" y="34" width="360" height="46" rx="23" fill="#FFFFFF" stroke="rgba(24,24,27,0.08)"/>
+  <circle cx="68" cy="57" r="6" fill="#5B8E7D"/>
+  <text x="86" y="62" class="ui" fill="#18181B">Architecture — v4</text>
+  <text x="236" y="62" class="mono">● Saved</text>
+
+  <rect x="880" y="34" width="280" height="46" rx="23" fill="#FFFFFF" stroke="rgba(24,24,27,0.08)"/>
+  <circle cx="910" cy="57" r="13" fill="#C2705D"/>
+  <text x="910" y="62" text-anchor="middle" class="mono" fill="#FFFFFF">A</text>
+  <circle cx="944" cy="57" r="13" fill="#5B8E7D"/>
+  <text x="944" y="62" text-anchor="middle" class="mono" fill="#FFFFFF">B</text>
+  <text x="974" y="62" class="ui">2 editing</text>
+
+  <!-- Shared sketch -->
+  <rect x="150" y="170" width="240" height="130" rx="8" class="card"/>
+  <rect x="150" y="170" width="240" height="130" rx="8" class="select"/>
+  <text x="270" y="220" text-anchor="middle" class="label">Browser client</text>
+  <text x="270" y="246" text-anchor="middle" class="mono">React · Konva · Yjs</text>
+  <text x="270" y="268" text-anchor="middle" class="mono">IndexedDB offline cache</text>
+
+  <rect x="500" y="170" width="240" height="130" rx="8" class="card"/>
+  <text x="620" y="220" text-anchor="middle" class="label">Reverse proxy</text>
+  <text x="620" y="246" text-anchor="middle" class="mono">Nginx · TLS · CSP</text>
+  <text x="620" y="268" text-anchor="middle" class="mono">/ws/ upgrade</text>
+
+  <rect x="850" y="170" width="240" height="130" rx="8" class="card"/>
+  <text x="970" y="220" text-anchor="middle" class="label">NestJS gateway</text>
+  <text x="970" y="246" text-anchor="middle" class="mono">REST + binary Yjs</text>
+  <text x="970" y="268" text-anchor="middle" class="mono">RBAC on every frame</text>
+
+  <path d="M 390 235 L 500 235" class="edge"/>
+  <path d="M 740 235 L 850 235" class="edge"/>
+
+  <rect x="500" y="380" width="240" height="120" rx="8" class="card"/>
+  <text x="620" y="428" text-anchor="middle" class="label">PostgreSQL</text>
+  <text x="620" y="454" text-anchor="middle" class="mono">binary CRDT snapshots</text>
+
+  <rect x="850" y="380" width="240" height="120" rx="8" class="card"/>
+  <text x="970" y="428" text-anchor="middle" class="label">Redis</text>
+  <text x="970" y="454" text-anchor="middle" class="mono">pub/sub fanout</text>
+
+  <path d="M 970 300 L 970 380" class="edge"/>
+  <path d="M 620 300 L 620 380" class="edge"/>
+
+  <!-- Sticky note -->
+  <rect x="150" y="380" width="230" height="120" rx="4" fill="#FBF3E4" stroke="#E7D8B8"/>
+  <text x="172" y="414" class="ui" fill="#5B4B32">Review the sync path</text>
+  <text x="172" y="440" class="mono">awareness is never persisted</text>
+  <text x="172" y="460" class="mono">snapshots every 3 s</text>
+
+  <!-- Tool dock -->
+  <rect x="470" y="608" width="260" height="46" rx="23" fill="#FFFFFF" stroke="rgba(24,24,27,0.08)"/>
+  <text x="600" y="637" text-anchor="middle" class="mono">V   H   R   O   A   P   T   N</text>
+
+  <!-- Cursor A (owner) -->
+  <g transform="translate(392, 212)">
+    <path d="M0 0 L0 24 L6.5 18 L11 28 L16 26 L11.5 16.5 L20 16 Z" fill="#C2705D" stroke="#FFFFFF" stroke-width="1.5"/>
+    <rect x="20" y="22" width="92" height="24" rx="12" fill="#C2705D"/>
+    <text x="32" y="38" class="mono" fill="#FFFFFF">A · Owner</text>
+  </g>
+
+  <!-- Cursor B (editor), mid-drag on a different shape -->
+  <g transform="translate(1028, 396)">
+    <path d="M0 0 L0 24 L6.5 18 L11 28 L16 26 L11.5 16.5 L20 16 Z" fill="#5B8E7D" stroke="#FFFFFF" stroke-width="1.5"/>
+    <rect x="20" y="22" width="88" height="24" rx="12" fill="#5B8E7D"/>
+    <text x="32" y="38" class="mono" fill="#FFFFFF">B · Editor</text>
+  </g>
+
+  <text x="600" y="666" text-anchor="middle" class="mono">Illustration — two cursors on a shared architecture diagram (not a screen capture)</text>
+</svg>

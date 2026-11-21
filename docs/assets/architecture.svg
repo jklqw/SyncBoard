@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" width="1200" height="820" role="img" aria-labelledby="title desc">
+  <title id="title">SyncBoard architecture</title>
+  <desc id="desc">Browser clients connect through an Nginx reverse proxy to a stateless NestJS REST API and Yjs WebSocket gateway, which coordinate Redis, PostgreSQL and MinIO.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#71717A"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563EB"/>
+    </marker>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1.1" fill="#E4E2DD"/>
+    </pattern>
+    <style>
+      .ink { font: 600 17px Inter, -apple-system, 'Segoe UI', sans-serif; fill: #18181B; }
+      .sub { font: 400 13px Inter, -apple-system, 'Segoe UI', sans-serif; fill: #71717A; }
+      .mono { font: 500 12px 'JetBrains Mono', ui-monospace, monospace; fill: #52525B; }
+      .head { font: 600 24px Inter, -apple-system, 'Segoe UI', sans-serif; fill: #18181B; }
+      .box { fill: #FFFFFF; stroke: rgba(24,24,27,0.14); stroke-width: 1; }
+      .accent { fill: none; stroke: #2563EB; stroke-width: 1.75; }
+      .line { fill: none; stroke: #A1A1AA; stroke-width: 1.4; }
+      .dash { fill: none; stroke: #2563EB; stroke-width: 1.4; stroke-dasharray: 5 5; }
+      .pill { fill: #EFF4FF; stroke: #BFDBFE; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="820" fill="#FAF9F6"/>
+  <rect width="1200" height="820" fill="url(#dots)"/>
+  <text x="60" y="66" class="head">SyncBoard — distributed collaboration topology</text>
+  <text x="60" y="92" class="sub">CRDT state is durable; presence is ephemeral; every server instance is stateless.</text>
+
+  <!-- Clients -->
+  <rect x="120" y="130" width="300" height="150" rx="10" class="box"/>
+  <rect x="120" y="130" width="300" height="150" rx="10" class="accent"/>
+  <circle cx="154" cy="164" r="12" fill="#C2705D"/>
+  <text x="176" y="169" class="ink">User A · Owner</text>
+  <text x="146" y="206" class="mono">React 19 · Konva 4 layers · rbush</text>
+  <text x="146" y="228" class="mono">Y.Doc · Awareness · IndexedDB</text>
+  <rect x="146" y="245" width="96" height="22" rx="11" class="pill"/>
+  <text x="158" y="260" class="mono" fill="#2563EB">60 FPS canvas</text>
+
+  <rect x="780" y="130" width="300" height="150" rx="10" class="box"/>
+  <circle cx="814" cy="164" r="12" fill="#5B8E7D"/>
+  <text x="836" y="169" class="ink">User B · Editor</text>
+  <text x="806" y="206" class="mono">same CRDT, isolated context</text>
+  <text x="806" y="228" class="mono">optimistic local edits</text>
+  <rect x="806" y="245" width="114" height="22" rx="11" class="pill"/>
+  <text x="818" y="260" class="mono" fill="#2563EB">scoped undo</text>
+
+  <!-- Edge -->
+  <rect x="450" y="345" width="300" height="86" rx="10" class="box"/>
+  <rect x="450" y="345" width="300" height="86" rx="10" class="accent"/>
+  <text x="600" y="378" text-anchor="middle" class="ink">Nginx reverse proxy</text>
+  <text x="600" y="402" text-anchor="middle" class="mono">TLS · HTTP/2 · CSP · WS upgrade</text>
+
+  <!-- Backend -->
+  <rect x="230" y="500" width="300" height="104" rx="10" class="box"/>
+  <text x="380" y="534" text-anchor="middle" class="ink">NestJS · REST API</text>
+  <text x="380" y="557" text-anchor="middle" class="mono">auth · boards · RBAC · exports</text>
+  <text x="380" y="579" text-anchor="middle" class="mono">uploads · audit</text>
+
+  <rect x="670" y="500" width="300" height="104" rx="10" class="box"/>
+  <rect x="670" y="500" width="300" height="104" rx="10" class="accent"/>
+  <text x="820" y="534" text-anchor="middle" class="ink">NestJS · Yjs WS gateway</text>
+  <text x="820" y="557" text-anchor="middle" class="mono">ticket handshake · frame RBAC</text>
+  <text x="820" y="579" text-anchor="middle" class="mono">awareness fanout</text>
+
+  <!-- Data -->
+  <rect x="70" y="675" width="300" height="94" rx="10" class="box"/>
+  <text x="220" y="708" text-anchor="middle" class="ink">Redis 7</text>
+  <text x="220" y="731" text-anchor="middle" class="mono">pub/sub · rate limits</text>
+  <text x="220" y="752" text-anchor="middle" class="mono">revocation</text>
+
+  <rect x="450" y="675" width="300" height="94" rx="10" class="box"/>
+  <text x="600" y="708" text-anchor="middle" class="ink">PostgreSQL 16</text>
+  <text x="600" y="731" text-anchor="middle" class="mono">users · RBAC · BYTEA snapshots</text>
+  <text x="600" y="752" text-anchor="middle" class="mono">comments · audit log</text>
+
+  <rect x="830" y="675" width="300" height="94" rx="10" class="box"/>
+  <text x="980" y="708" text-anchor="middle" class="ink">MinIO / S3</text>
+  <text x="980" y="731" text-anchor="middle" class="mono">sanitized uploads</text>
+  <text x="980" y="752" text-anchor="middle" class="mono">export artefacts</text>
+
+  <!-- Edges -->
+  <path d="M 270 280 C 360 320, 500 320, 560 345" class="line" marker-end="url(#arrow)"/>
+  <path d="M 930 280 C 840 320, 700 320, 640 345" class="line" marker-end="url(#arrow)"/>
+  <path d="M 530 431 C 480 462, 420 478, 380 500" class="line" marker-end="url(#arrow)"/>
+  <path d="M 670 431 C 720 462, 780 478, 820 500" class="accent" marker-end="url(#arrow-blue)"/>
+
+  <path d="M 320 604 C 290 632, 250 654, 230 675" class="line" marker-end="url(#arrow)"/>
+  <path d="M 400 604 C 430 632, 470 654, 530 675" class="line" marker-end="url(#arrow)"/>
+  <path d="M 440 604 C 540 636, 640 654, 600 675" class="dash" marker-end="url(#arrow-blue)"/>
+  <path d="M 490 604 C 600 632, 760 648, 880 675" class="line" marker-end="url(#arrow)"/>
+  <path d="M 800 604 C 810 632, 820 654, 850 675" class="accent" marker-end="url(#arrow-blue)"/>
+  <path d="M 870 604 C 920 632, 960 654, 980 675" class="dash" marker-end="url(#arrow-blue)"/>
+
+  <text x="612" y="645" class="mono" fill="#2563EB">debounced snapshots</text>
+  <text x="955" y="650" class="mono" fill="#2563EB">presence + updates</text>
+</svg>
