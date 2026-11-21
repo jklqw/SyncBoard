@@ -1,3 +1,15 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - esbuild
+  - '@esbuild/linux-x64'
+  - argon2
+  - sharp
+  - '@swc/core'
+  - '@tailwindcss/oxide'
+  - '@parcel/watcher'
