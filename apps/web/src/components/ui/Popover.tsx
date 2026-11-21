@@ -55,9 +55,24 @@ export function Popover({
     'aria-haspopup'?: string;
   }>;
 
+  const wiredTrigger = triggerElement.props
+    ? {
+        ...triggerElement,
+        props: {
+          ...triggerElement.props,
+          'aria-expanded': open,
+          'aria-haspopup': 'dialog' as const,
+          onClick: (event: React.MouseEvent<HTMLElement>) => {
+            triggerElement.props.onClick?.(event);
+            setOpen(!open);
+          },
+        },
+      }
+    : triggerElement;
+
   return (
     <div ref={rootRef} className="relative inline-flex">
-      {trigger}
+      {wiredTrigger}
       {open ? (
         <div
           role="dialog"
