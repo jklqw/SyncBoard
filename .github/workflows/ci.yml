@@ -114,7 +114,7 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
       - name: Secret scanning (advisory until a GITLEAKS_LICENSE secret is configured)
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         continue-on-error: true
         env:
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
