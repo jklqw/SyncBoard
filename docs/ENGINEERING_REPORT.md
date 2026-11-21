@@ -29,7 +29,37 @@
 
 ## 2. Domain Modeling & Persistence Architecture (Phase 1)
 
-_To be completed after the shared schema and Prisma migration (Commit 7)._
+### Canonical element contracts
+
+Every board element is validated with a Zod discriminated union on `type` before it can enter the
+CRDT document. Shared fields are `id`, `x`, `y`, `width`, `height`, `rotation`, `zIndex`, optional
+`groupId`, `style`, `locked` and `updatedAt`. Nine variants are supported: rectangle, ellipse, frame,
+line, arrow, freehand, text, sticky note and image. Arrows carry optional `startBinding`/`endBinding`
+(`{ elementId, anchor }`) used by smart connectors. The same schemas are imported by the NestJS DTO
+validation layer and the React canvas, so an invalid shape is rejected identically on both sides.
+
+### Fractional indexing
+
+`zIndex` is a **string** fractional index, not an integer. Moving an element between two neighbours
+produces a new string between them (e.g. `a` → `aV`, `aT`) instead of renumbering every sibling. Two
+clients reordering concurrently in the CRDT therefore cannot clobber each other's ordering values.
+
+### Relational schema
+
+`User`, `RefreshToken`, `Board`, `BoardMember`, `BoardSnapshot`, `BoardComment` and `AuditLog` are
+first-class relational models with unique constraints on `(boardId, userId)` memberships, unique
+token hashes and share tokens, and composite indexes on the hot paths (`ownerId, updatedAt`,
+`boardId, createdAt`, `userId, familyId`). Cascade deletes keep board-related data consistent;
+audit logs use `SetNull` to preserve activity history after user deletion.
+
+### Why BYTEA snapshots beat row-per-shape JSONB
+
+A row-per-shape design issues an UPDATE for every drag frame and requires conflict resolution for
+each field. SyncBoard instead keeps a single compacted `Y.encodeStateAsUpdate(doc)` binary in
+`Board.yjsState`. Updates are accumulated in memory and flushed at most every 3 seconds (15-second
+ceiling), reducing write amplification by orders of magnitude during drawing. `stateVersion` plus a
+Redis lock guards eviction so two stateless instances cannot overwrite a newer snapshot. Version
+history stores full binary `BoardSnapshot` rows, enabling exact point-in-time restore.
 
 ## 3. Canvas Rendering & Performance Engineering (Phase 2)
 
