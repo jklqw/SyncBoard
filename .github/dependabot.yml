@@ -1,0 +1,55 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/London
+    open-pull-requests-limit: 10
+    versioning-strategy: increase-if-necessary
+    groups:
+      dev-tooling:
+        patterns:
+          - 'eslint*'
+          - 'prettier*'
+          - 'typescript*'
+          - 'turbo'
+          - '@playwright/*'
+          - 'husky'
+          - 'lint-staged'
+      framework:
+        patterns:
+          - '@nestjs/*'
+          - 'react'
+          - 'react-dom'
+          - 'konva'
+          - 'react-konva'
+          - 'yjs'
+          - 'y-protocols'
+    labels:
+      - dependencies
+      - javascript
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/London
+    labels:
+      - dependencies
+      - github-actions
+
+  - package-ecosystem: docker
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/London
+    labels:
+      - dependencies
+      - docker

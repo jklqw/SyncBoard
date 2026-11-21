@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.34.9'
+
+jobs:
+  quality:
+    name: Lint, typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  tests:
+    name: Unit & API integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: syncboard
+          POSTGRES_PASSWORD: syncboard
+          POSTGRES_DB: syncboard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U syncboard -d syncboard"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://syncboard:syncboard@localhost:5432/syncboard?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci-only-access-secret-not-for-production
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-not-for-production
+      MINIO_ENDPOINT: localhost
+      MINIO_ACCESS_KEY: ci-minio-user
+      MINIO_SECRET_KEY: ci-minio-secret
+      MINIO_BUCKET: syncboard-media
+      CORS_ORIGIN: http://localhost:5173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare database
+        run: |
+          pnpm --filter server exec prisma generate
+          pnpm --filter server exec prisma migrate deploy
+      - run: pnpm test
+
+  security:
+    name: Dependency & filesystem security gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: High-severity dependency audit
+        run: pnpm audit --audit-level=high
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Secret scanning (advisory until a GITLEAKS_LICENSE secret is configured)
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  docker:
+    name: Validate production images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build web image
+        run: |
+          dockerfile=apps/web/Dockerfile
+          [ -f "$dockerfile" ] || dockerfile=docker/Dockerfile.web.template
+          docker build -f "$dockerfile" -t syncboard-web:ci .
+      - name: Build server image
+        run: |
+          dockerfile=apps/server/Dockerfile
+          [ -f "$dockerfile" ] || dockerfile=docker/Dockerfile.server.template
+          docker build -f "$dockerfile" -t syncboard-server:ci .
+      - name: Build reverse proxy image
+        run: docker build -f docker/nginx/Dockerfile -t syncboard-nginx:ci docker/nginx
