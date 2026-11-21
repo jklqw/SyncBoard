@@ -6,7 +6,7 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   /** Used as the accessible name and, when present, the tooltip text. */
   label: string;
   icon: ReactNode;
-  shortcut?: string;
+  shortcut?: string | undefined;
   tooltip?: boolean;
   active?: boolean;
   small?: boolean;

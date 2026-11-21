@@ -229,7 +229,7 @@ export class AuthService {
   }
 
   private async issueSession(
-    user: UserRow,
+    user: Pick<UserRow, 'id' | 'email' | 'username'>,
     req: Request,
     res: Response,
   ): Promise<string> {
@@ -261,7 +261,7 @@ export class AuthService {
     };
     return this.jwt.signAsync(payload, {
       secret: this.env.JWT_ACCESS_SECRET,
-      expiresIn: this.env.JWT_ACCESS_TTL,
+      expiresIn: Math.floor(ttlToMilliseconds(this.env.JWT_ACCESS_TTL) / 1000),
     });
   }
 

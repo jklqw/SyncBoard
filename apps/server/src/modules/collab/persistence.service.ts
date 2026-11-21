@@ -80,9 +80,9 @@ export class PersistenceService implements OnModuleDestroy {
     const acquired = await this.redis.client.set(
       lockKey,
       this.instanceId,
-      'NX',
       'PX',
       PERSIST_LOCK_TTL_MS,
+      'NX',
     );
     if (acquired !== 'OK') return;
 

@@ -1,5 +1,5 @@
-import type { CanvasElement } from '../schemas/elements';
-import { hasPoints } from '../schemas/elements';
+import type { CanvasElement } from '../schemas/elements.js';
+import { hasPoints } from '../schemas/elements.js';
 
 export interface Rect {
   minX: number;

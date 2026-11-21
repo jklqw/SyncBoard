@@ -121,7 +121,7 @@ function mindmapElements(): TemplateElement[] {
 }
 
 /** Build a canonical, compact Y.Doc binary state for a built-in template. */
-export function buildTemplateState(template: BoardTemplate): Buffer {
+export function buildTemplateState(template: BoardTemplate): Uint8Array<ArrayBuffer> {
   const doc = new Y.Doc();
   const elements = doc.getMap<Y.Map<unknown>>('elements');
 
@@ -146,10 +146,10 @@ export function buildTemplateState(template: BoardTemplate): Buffer {
     }, 'template-seed');
   }
 
-  return Buffer.from(Y.encodeStateAsUpdate(doc));
+  return Y.encodeStateAsUpdate(doc) as Uint8Array<ArrayBuffer>;
 }
 
 /** Empty Y.Doc state used when no template content is available. */
-export function emptyState(): Buffer {
-  return Buffer.from(Y.encodeStateAsUpdate(new Y.Doc()));
+export function emptyState(): Uint8Array<ArrayBuffer> {
+  return Y.encodeStateAsUpdate(new Y.Doc()) as Uint8Array<ArrayBuffer>;
 }

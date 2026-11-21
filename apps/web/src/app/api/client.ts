@@ -110,7 +110,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       ...rest,
       credentials: 'include',
       headers: resolvedHeaders,
-      body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
+      body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : null,
     });
 
   let response = await send();

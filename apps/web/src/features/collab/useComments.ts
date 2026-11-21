@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CommentDto } from '@syncboard/shared';
-import { boardsApi, type CreateCommentInput } from '../../app/api';
+import { boardsApi } from '../../app/api';
+import type { CreateCommentInput } from '../../app/api/boards';
 
 export interface CommentsApi {
   comments: CommentDto[];

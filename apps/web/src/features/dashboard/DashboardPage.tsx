@@ -8,6 +8,7 @@ import { useUiStore } from '../../stores/useUiStore';
 import { BoardCard } from './BoardCard';
 import { CreateBoardDialog } from './CreateBoardDialog';
 import { ShareModal } from './ShareModal';
+import { Sidebar } from './Sidebar';
 
 const FILTER_TITLES: Record<BoardFilter, string> = {
   recent: 'Recent boards',

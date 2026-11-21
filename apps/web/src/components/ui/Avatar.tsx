@@ -2,7 +2,7 @@ import { cn } from './cn';
 
 export interface AvatarProps {
   name: string;
-  color?: string;
+  color?: string | undefined;
   size?: number;
   presence?: 'online' | 'away' | 'offline';
   className?: string;

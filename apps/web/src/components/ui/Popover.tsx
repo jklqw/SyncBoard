@@ -12,8 +12,8 @@ export interface PopoverProps {
   children: ReactNode | ((close: () => void) => ReactNode);
   align?: 'start' | 'end' | 'center';
   className?: string;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open?: boolean | undefined;
+  onOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 export function Popover({

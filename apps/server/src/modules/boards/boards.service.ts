@@ -158,7 +158,7 @@ export class BoardsService {
         title: dto.title.trim(),
         ownerId: userId,
         folderName: dto.folderName?.trim() || null,
-        yjsState: state,
+        yjsState: new Uint8Array(state),
       },
     });
     return this.toSummary(board, Role.OWNER);
@@ -199,9 +199,9 @@ export class BoardsService {
       orderBy: { createdAt: 'desc' },
     });
     const state = board.yjsState
-      ? Buffer.from(board.yjsState)
+      ? new Uint8Array(board.yjsState)
       : snapshot
-        ? Buffer.from(snapshot.yjsState)
+        ? new Uint8Array(snapshot.yjsState)
         : emptyState();
 
     const copy = await this.prisma.board.create({
@@ -209,7 +209,7 @@ export class BoardsService {
         title: `${board.title} (Copy)`,
         ownerId: userId,
         folderName: board.folderName,
-        yjsState: state,
+        yjsState: new Uint8Array(state),
       },
     });
     return this.toSummary(copy, Role.OWNER);
@@ -386,13 +386,13 @@ export class BoardsService {
     dto: CreateSnapshotDto,
   ) {
     const board = await this.findBoardOrThrow(boardId);
-    const state = board.yjsState ? Buffer.from(board.yjsState) : emptyState();
+    const state = board.yjsState ? new Uint8Array(board.yjsState) : emptyState();
     const snapshot = await this.prisma.boardSnapshot.create({
       data: {
         boardId,
         createdById,
         label: dto.label.trim(),
-        yjsState: state,
+        yjsState: new Uint8Array(state),
       },
       select: {
         id: true,
@@ -423,7 +423,7 @@ export class BoardsService {
     });
     if (!snapshot) throw new NotFoundException('Snapshot not found');
 
-    const currentState = board.yjsState ? Buffer.from(board.yjsState) : emptyState();
+    const currentState = board.yjsState ? new Uint8Array(board.yjsState) : emptyState();
     await this.prisma.boardSnapshot.create({
       data: {
         boardId,
@@ -439,7 +439,7 @@ export class BoardsService {
       await this.prisma.board.update({
         where: { id: boardId },
         data: {
-          yjsState: Buffer.from(state),
+          yjsState: state,
           stateVersion: { increment: 1 },
         },
       });

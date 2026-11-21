@@ -1,5 +1,5 @@
-import type { BindingAnchor, Point } from '../schemas/elements';
-import type { Rect } from './bounds';
+import type { BindingAnchor, Point } from '../schemas/elements.js';
+import type { Rect } from './bounds.js';
 
 export function rectCenter(rect: Rect): Point {
   return { x: (rect.minX + rect.maxX) / 2, y: (rect.minY + rect.maxY) / 2 };

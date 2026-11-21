@@ -16,8 +16,8 @@ export interface DropdownProps {
   items: DropdownItem[];
   align?: 'start' | 'end';
   heading?: string;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  open?: boolean | undefined;
+  onOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 export function Dropdown({ trigger, items, align = 'end', heading, open, onOpenChange }: DropdownProps) {

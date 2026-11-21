@@ -16,3 +16,6 @@ export const PERSIST_LOCK_TTL_MS = 10_000;
 
 export const WS_RECHECK_INTERVAL_MS = 10_000;
 export const WS_SIZE_CHECK_INTERVAL = 100;
+
+/** Hard cap per WebSocket frame; mirrors env MAX_WS_FRAME_BYTES default. */
+export const MAX_WS_FRAME_BYTES = 1024 * 1024;

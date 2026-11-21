@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Role } from './permissions';
+import type { Role } from './permissions.js';
 
 export const BOARD_TEMPLATES = ['blank', 'architecture', 'flowchart', 'mindmap'] as const;
 export type BoardTemplate = (typeof BOARD_TEMPLATES)[number];

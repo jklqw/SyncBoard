@@ -3,6 +3,7 @@ import {
   Controller,
   Param,
   Post,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';

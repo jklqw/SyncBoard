@@ -3,7 +3,7 @@ import { cn } from './cn';
 
 export interface TooltipProps {
   label: ReactNode;
-  shortcut?: string;
+  shortcut?: string | undefined;
   children: ReactElement;
   side?: 'top' | 'bottom';
   className?: string;

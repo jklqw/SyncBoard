@@ -2,12 +2,14 @@ import * as Y from 'yjs';
 import * as encoding from 'lib0/encoding';
 import * as decoding from 'lib0/decoding';
 import {
-  messageAwareness,
-  messageSync,
   messageYjsSyncStep1,
   messageYjsUpdate,
   readSyncMessage,
 } from 'y-protocols/sync';
+
+/** Outer message opcodes (mirrors server MSG_SYNC / MSG_AWARENESS). */
+const messageSync = 0;
+const messageAwareness = 1;
 import {
   Awareness,
   applyAwarenessUpdate,
