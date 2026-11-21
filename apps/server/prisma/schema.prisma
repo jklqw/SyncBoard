@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  COMMENTER
+  VIEWER
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  username     String         @unique
+  displayName  String
+  passwordHash String
+  avatarColor  String         @default("#5B8E7D")
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  boards       Board[]
+  memberships  BoardMember[]
+  snapshots    BoardSnapshot[]
+  comments     BoardComment[]
+  auditLogs    AuditLog[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id                String    @id @default(cuid())
+  userId            String
+  tokenHash         String    @unique
+  familyId          String
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime  @default(now())
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, familyId])
+  @@index([familyId])
+}
+
+model Board {
+  id           String         @id @default(cuid())
+  title        String
+  ownerId      String
+  folderName   String?
+  isFavorite   Boolean        @default(false)
+  isArchived   Boolean        @default(false)
+  yjsState     Bytes?
+  stateVersion Int            @default(0)
+  shareToken   String?        @unique
+  shareRole    Role           @default(VIEWER)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members      BoardMember[]
+  snapshots    BoardSnapshot[]
+  comments     BoardComment[]
+  auditLogs    AuditLog[]
+
+  @@index([ownerId, updatedAt])
+  @@index([folderName])
+}
+
+model BoardMember {
+  id        String   @id @default(cuid())
+  boardId   String
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@index([userId])
+}
+
+model BoardSnapshot {
+  id          String   @id @default(cuid())
+  boardId     String
+  createdById String
+  label       String
+  yjsState    Bytes
+  createdAt   DateTime @default(now())
+  board       Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([boardId, createdAt])
+}
+
+model BoardComment {
+  id        String   @id @default(cuid())
+  boardId   String
+  authorId  String
+  x         Float?
+  y         Float?
+  elementId String?
+  body      String
+  resolved  Boolean  @default(false)
+  parentId  String?
+  createdAt DateTime @default(now())
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, resolved])
+  @@index([parentId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  boardId   String?
+  action    String
+  metadata  Json
+  ipAddress String?
+  createdAt DateTime @default(now())
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  board     Board?   @relation(fields: [boardId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([boardId, createdAt])
+}
