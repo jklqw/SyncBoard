@@ -1,0 +1,77 @@
+import { useEffect, useRef } from 'react';
+import type { CanvasElement } from '@syncboard/shared';
+import { worldToScreen } from './utils/geometry';
+import { useViewportStore } from '../../stores/useViewportStore';
+
+interface TextEditorOverlayProps {
+  element: CanvasElement;
+  onChange: (text: string) => void;
+  onClose: () => void;
+}
+
+export function TextEditorOverlay({ element, onChange, onClose }: TextEditorOverlayProps) {
+  const camera = useViewportStore((state) => ({ x: state.x, y: state.y, scale: state.scale }));
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const screen = worldToScreen({ x: element.x, y: element.y }, camera);
+  const isSticky = element.type === 'sticky';
+  const fontSize =
+    element.type === 'text'
+      ? element.fontSize * camera.scale
+      : Math.max(12, Math.min(18, (element.style.fontSize ?? 16) * camera.scale));
+  const width = Math.max(element.width, isSticky ? 180 : 120) * camera.scale;
+  const height = Math.max(element.height, isSticky ? 180 : fontSize * 1.4) * camera.scale;
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.focus();
+    node.select();
+  }, []);
+
+  if (element.type !== 'text' && element.type !== 'sticky') return null;
+
+  const text = element.text;
+  const background = isSticky
+    ? element.tone === 'cool'
+      ? '#DCE7EC'
+      : element.tone === 'neutral'
+        ? '#ECEAE5'
+        : '#F5E9D2'
+    : 'transparent';
+
+  return (
+    <textarea
+      ref={ref}
+      value={text}
+      aria-label={isSticky ? 'Edit sticky note' : 'Edit text'}
+      className="pointer-events-auto absolute z-30 resize-none overflow-hidden border-none outline-none"
+      style={{
+        left: screen.x,
+        top: screen.y,
+        width,
+        height,
+        fontSize,
+        lineHeight: 1.35,
+        fontFamily: 'Inter, sans-serif',
+        color: isSticky ? '#3B3126' : element.style.stroke,
+        background,
+        padding: isSticky ? 12 * camera.scale : 0,
+        transform: `rotate(${element.rotation}deg)`,
+        transformOrigin: 'top left',
+        boxShadow: isSticky ? '0 1px 0 rgba(24,24,27,0.06)' : 'none',
+      }}
+      onChange={(event) => onChange(event.target.value)}
+      onBlur={onClose}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    />
+  );
+}
