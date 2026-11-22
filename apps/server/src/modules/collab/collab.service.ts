@@ -33,6 +33,8 @@ import {
   encodeSyncReplyToStep1,
   encodeSyncStep1,
   encodeSyncStep2,
+  readAwarenessEntries,
+  sanitizeAwarenessUpdate,
 } from './yjs-protocol';
 
 interface Room {
@@ -185,13 +187,11 @@ export class CollabService implements OnModuleDestroy {
     if (firstClient) await this.subscribe(room);
 
     socket.send(Buffer.from(encodeSyncStep1(room.doc)));
-    socket.send(
-      Buffer.from(
-        encodeAwarenessMessage(
-          encodeAwarenessUpdate(room.awareness, [...room.awareness.getStates().keys()]),
-        ),
-      ),
+    const awarenessSnapshot = this.sanitizeAwareness(
+      room,
+      encodeAwarenessUpdate(room.awareness, [...room.awareness.getStates().keys()]),
     );
+    socket.send(Buffer.from(encodeAwarenessMessage(awarenessSnapshot)));
 
     this.logger.log(`Client joined board ${room.boardId} as ${role}`);
   }
@@ -203,7 +203,10 @@ export class CollabService implements OnModuleDestroy {
 
     if (meta.clientIds.size > 0) {
       removeAwarenessStates(room.awareness, [...meta.clientIds], socket);
-      const update = encodeAwarenessUpdate(room.awareness, [...room.awareness.getStates().keys()]);
+      const update = this.sanitizeAwareness(
+        room,
+        encodeAwarenessUpdate(room.awareness, [...room.awareness.getStates().keys()]),
+      );
       this.broadcastToRoom(room, Buffer.from(encodeAwarenessMessage(update)));
     }
 
@@ -316,12 +319,14 @@ export class CollabService implements OnModuleDestroy {
 
     if (message.kind === 'awareness') {
       const before = new Set(room.awareness.getStates().keys());
-      applyAwarenessUpdate(room.awareness, update, socket);
+      const clean = this.sanitizeAwareness(room, update, socket);
+      applyAwarenessUpdate(room.awareness, clean, socket);
       for (const clientId of room.awareness.getStates().keys()) {
         if (!before.has(clientId)) meta.clientIds.add(clientId);
       }
-      this.broadcastToRoom(room, data, socket);
-      await this.publish(room, 'awareness', data, update);
+      const framed = encodeAwarenessMessage(clean);
+      this.broadcastToRoom(room, Buffer.from(framed), socket);
+      await this.publish(room, 'awareness', framed, clean);
     }
   }
 
@@ -340,6 +345,43 @@ export class CollabService implements OnModuleDestroy {
 
   private canWrite(meta: SocketMeta): boolean {
     return ROLE_RANK[meta.role] >= ROLE_RANK[Role.EDITOR];
+  }
+
+  /**
+   * The server owns presence truth: viewers never publish a cursor, even if a
+   * browser tries to forge one. Role is stamped from the authenticated socket
+   * rather than trusting the awareness payload.
+   */
+  private sanitizeAwareness(room: Room, update: Uint8Array, sender?: WebSocket): Uint8Array {
+    const meta = sender ? this.sockets.get(sender) : undefined;
+    if (meta) {
+      for (const entry of readAwarenessEntries(update)) {
+        if (entry.state !== null) meta.clientIds.add(entry.clientId);
+      }
+    }
+
+    const clientRoles = new Map<number, Role>();
+    const viewerClients = new Set<number>();
+    for (const [socket, socketMeta] of this.sockets) {
+      if (socketMeta.room !== room || socket.readyState !== WebSocket.OPEN) continue;
+      for (const clientId of socketMeta.clientIds) {
+        clientRoles.set(clientId, socketMeta.role);
+        if (socketMeta.role === Role.VIEWER) viewerClients.add(clientId);
+      }
+    }
+
+    return sanitizeAwarenessUpdate(update, (clientId, state) => {
+      if (state === null || typeof state !== 'object') return state;
+      const next = { ...(state as Record<string, unknown>) };
+      const authoritativeRole = clientRoles.get(clientId);
+      if (authoritativeRole) next['role'] = authoritativeRole;
+      const role = next['role'];
+      if (viewerClients.has(clientId) || role === Role.VIEWER || next['watching'] === true) {
+        delete next['cursor'];
+        next['selection'] = [];
+      }
+      return next;
+    });
   }
 
   private checkDocumentSize(room: Room, socket: WebSocket): void {
@@ -415,9 +457,9 @@ export class CollabService implements OnModuleDestroy {
         this.broadcastToRoom(room, framed);
         this.schedulePersistence(room);
       } else if (envelope.kind === 'awareness') {
-        const update = Buffer.from(envelope.update ?? '', 'base64');
+        const update = this.sanitizeAwareness(room, Buffer.from(envelope.update ?? '', 'base64'));
         applyAwarenessUpdate(room.awareness, update, 'redis');
-        this.broadcastToRoom(room, framed);
+        this.broadcastToRoom(room, Buffer.from(encodeAwarenessMessage(update)));
       } else if (envelope.kind === 'comment' && channel === roomCommentsChannel(room.boardId)) {
         for (const client of room.sockets) {
           if (client.readyState === WebSocket.OPEN) client.send(framed);
