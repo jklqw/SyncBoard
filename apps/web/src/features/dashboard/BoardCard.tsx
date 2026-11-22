@@ -82,12 +82,12 @@ export function BoardCard({
 
   return (
     <article
-      className="sb-panel group relative flex flex-col overflow-hidden transition-shadow hover:shadow-[var(--sb-shadow-lg)]"
+      className="sb-panel group relative flex flex-col transition-shadow hover:shadow-[var(--sb-shadow-lg)]"
       aria-label={`Board ${board.title}`}
     >
       <button
         type="button"
-        className="block w-full text-left"
+        className="block w-full overflow-hidden rounded-t-[11px] text-left"
         onClick={() => navigate(`/board/${board.id}`)}
         aria-label={`Open ${board.title}`}
       >
@@ -109,7 +109,12 @@ export function BoardCard({
         </div>
         <div className="flex flex-none items-center gap-0.5">
           {board.isFavorite ? (
-            <Star size={13} fill="currentColor" style={{ color: 'var(--sb-accent)' }} aria-label="Starred" />
+            <Star
+              size={13}
+              fill="currentColor"
+              style={{ color: 'var(--sb-accent)' }}
+              aria-label="Starred"
+            />
           ) : null}
           <div onClick={(event) => event.stopPropagation()}>
             <Dropdown
@@ -125,11 +130,28 @@ export function BoardCard({
               }
               items={[
                 { label: 'Rename', icon: <Pencil size={14} />, onSelect: () => onRename(board) },
-                { label: board.isFavorite ? 'Remove star' : 'Add to starred', icon: <Star size={14} />, onSelect: () => onFavorite(board) },
+                {
+                  label: board.isFavorite ? 'Remove star' : 'Add to starred',
+                  icon: <Star size={14} />,
+                  onSelect: () => onFavorite(board),
+                },
                 { label: 'Share…', icon: <UsersIcon />, onSelect: () => onShare(board) },
-                { label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => onDuplicate(board) },
-                { label: board.isArchived ? 'Unarchive' : 'Archive', icon: board.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />, onSelect: () => onArchive(board) },
-                { label: 'Delete', icon: <Trash2 size={14} />, danger: true, onSelect: () => onRemove(board) },
+                {
+                  label: 'Duplicate',
+                  icon: <Copy size={14} />,
+                  onSelect: () => onDuplicate(board),
+                },
+                {
+                  label: board.isArchived ? 'Unarchive' : 'Archive',
+                  icon: board.isArchived ? <ArchiveRestore size={14} /> : <Archive size={14} />,
+                  onSelect: () => onArchive(board),
+                },
+                {
+                  label: 'Delete',
+                  icon: <Trash2 size={14} />,
+                  danger: true,
+                  onSelect: () => onRemove(board),
+                },
               ]}
             />
           </div>
@@ -141,7 +163,17 @@ export function BoardCard({
 
 function UsersIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
