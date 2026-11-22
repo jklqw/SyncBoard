@@ -34,6 +34,7 @@ Implement the complete **SyncBoard** production-grade collaborative whiteboard d
 ## Git state (as of 2026-11-22 end of session)
 
 ```
+5bd66ed docs(memory): record canvas and sharing verification
 016b0a6 feat(share): add no-login watch mode and edit grants
 8959338 feat(canvas): restore editing and add code and image features
 86b244d fix(collab): preserve element fields when updating CRDT
