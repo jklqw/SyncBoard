@@ -49,6 +49,7 @@ export const TOOL_IDS = [
   'text',
   'sticky',
   'image',
+  'code',
 ] as const;
 
 export type ToolId = (typeof TOOL_IDS)[number];

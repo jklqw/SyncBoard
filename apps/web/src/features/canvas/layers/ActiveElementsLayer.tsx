@@ -8,6 +8,9 @@ interface ActiveElementsLayerProps {
   elements: CanvasElement[];
   stageRef: RefObject<Konva.Stage | null>;
   draggable: boolean;
+  interactive: boolean;
+  onSelect: (id: string, additive: boolean) => void;
+  onOpenEditor: (id: string) => void;
   onTransformEnd: (id: string, attrs: TransformResult) => void;
 }
 
@@ -37,6 +40,9 @@ export const ActiveElementsLayer = memo(function ActiveElementsLayer({
   elements,
   stageRef,
   draggable,
+  interactive,
+  onSelect,
+  onOpenEditor,
   onTransformEnd,
 }: ActiveElementsLayerProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -72,7 +78,13 @@ export const ActiveElementsLayer = memo(function ActiveElementsLayer({
   return (
     <Layer>
       {elements.map((element) => (
-        <ShapeNode key={element.id} element={element} listening />
+        <ShapeNode
+          key={element.id}
+          element={element}
+          listening={interactive}
+          onSelect={onSelect}
+          onOpenEditor={onOpenEditor}
+        />
       ))}
       <Transformer
         ref={transformerRef}
@@ -86,7 +98,9 @@ export const ActiveElementsLayer = memo(function ActiveElementsLayer({
         anchorCornerRadius={2}
         borderStroke="#2563EB"
         borderStrokeWidth={1}
-        boundBoxFunc={(oldBox, newBox) => (Math.abs(newBox.width) < 4 || Math.abs(newBox.height) < 4 ? oldBox : newBox)}
+        boundBoxFunc={(oldBox, newBox) =>
+          Math.abs(newBox.width) < 4 || Math.abs(newBox.height) < 4 ? oldBox : newBox
+        }
         onTransformEnd={() => {
           const stage = stageRef.current;
           if (!stage) return;

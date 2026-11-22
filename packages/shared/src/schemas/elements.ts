@@ -77,8 +77,15 @@ export const StickyElementSchema = BaseElementSchema.extend({
 });
 export const ImageElementSchema = BaseElementSchema.extend({
   type: z.literal('image'),
-  src: z.string().max(2048),
+  // Remote S3 URLs are short; inline data URLs are a bounded offline fallback.
+  src: z.string().max(900_000),
   assetId: z.string().max(128).nullable().optional(),
+});
+export const CodeElementSchema = BaseElementSchema.extend({
+  type: z.literal('code'),
+  text: z.string().max(20_000),
+  language: z.string().max(32),
+  title: z.string().max(120).optional(),
 });
 
 export const ElementSchema = z.discriminatedUnion('type', [
@@ -91,6 +98,7 @@ export const ElementSchema = z.discriminatedUnion('type', [
   TextElementSchema,
   StickyElementSchema,
   ImageElementSchema,
+  CodeElementSchema,
 ]);
 
 export type CanvasElement = z.infer<typeof ElementSchema>;
@@ -104,6 +112,7 @@ export type FreehandElement = z.infer<typeof FreehandElementSchema>;
 export type TextElement = z.infer<typeof TextElementSchema>;
 export type StickyElement = z.infer<typeof StickyElementSchema>;
 export type ImageElement = z.infer<typeof ImageElementSchema>;
+export type CodeElement = z.infer<typeof CodeElementSchema>;
 
 export function isBindable(element: CanvasElement): boolean {
   return (
@@ -111,7 +120,8 @@ export function isBindable(element: CanvasElement): boolean {
     element.type === 'ellipse' ||
     element.type === 'frame' ||
     element.type === 'sticky' ||
-    element.type === 'image'
+    element.type === 'image' ||
+    element.type === 'code'
   );
 }
 

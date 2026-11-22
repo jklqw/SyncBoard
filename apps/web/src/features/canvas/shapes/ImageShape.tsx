@@ -11,7 +11,8 @@ function useLoadedImage(src: string): HTMLImageElement | null {
       return;
     }
     const next = new window.Image();
-    next.crossOrigin = 'anonymous';
+    // No crossOrigin: MinIO/S3 URLs work without a CORS policy and inline
+    // data URLs work everywhere. Canvas export draws through Konva's own path.
     next.onload = () => setImage(next);
     next.onerror = () => setImage(null);
     next.src = src;

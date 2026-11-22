@@ -28,10 +28,14 @@ export function TextEditorOverlay({ element, onChange, onClose }: TextEditorOver
   const height = Math.max(element.height, isSticky ? 180 : fontSize * 1.4) * camera.scale;
 
   useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    node.focus();
-    node.select();
+    // The pointerup that follows the canvas click can steal focus from a
+    // synchronously focused textarea; focus on the next tick so typing always
+    // lands in the editor instead of triggering canvas shortcuts.
+    const timer = window.setTimeout(() => {
+      ref.current?.focus();
+      ref.current?.select();
+    }, 80);
+    return () => window.clearTimeout(timer);
   }, []);
 
   if (element.type !== 'text' && element.type !== 'sticky') return null;
@@ -67,7 +71,6 @@ export function TextEditorOverlay({ element, onChange, onClose }: TextEditorOver
         boxShadow: isSticky ? '0 1px 0 rgba(24,24,27,0.06)' : 'none',
       }}
       onChange={(event) => onChange(event.target.value)}
-      onBlur={onClose}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.preventDefault();

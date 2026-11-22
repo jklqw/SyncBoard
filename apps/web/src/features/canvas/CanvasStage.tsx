@@ -20,8 +20,10 @@ import { ActiveElementsLayer, type TransformResult } from './layers/ActiveElemen
 import { GridLayer } from './layers/GridLayer';
 import { OverlayLayer } from './layers/OverlayLayer';
 import { StaticElementsLayer } from './layers/StaticElementsLayer';
+import { CodeEditorOverlay } from './CodeEditorOverlay';
 import { TextEditorOverlay } from './TextEditorOverlay';
 import { recomputeBoundArrows, snapEndpoint } from './utils/connectors';
+import { fileToInlineImage } from './utils/imageFallback';
 import { createElement, duplicateElement, newId, nextZIndex } from './utils/elementFactory';
 import {
   elementsIntersect,
@@ -61,25 +63,32 @@ function snapPoint(point: Point2D, enabled: boolean): Point2D {
   return { x: Math.round(point.x / g) * g, y: Math.round(point.y / g) * g };
 }
 
+function finiteOr(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
 function applyTransform(element: CanvasElement, attrs: TransformResult): CanvasElement {
-  const scaleX = attrs.scaleX || 1;
-  const scaleY = attrs.scaleY || 1;
-  const width = Math.max(Math.abs(attrs.width * scaleX), 1);
-  const height = Math.max(Math.abs(attrs.height * scaleY), 1);
+  const scaleX = finiteOr(attrs.scaleX, 1) || 1;
+  const scaleY = finiteOr(attrs.scaleY, 1) || 1;
+  const x = finiteOr(attrs.x, element.x);
+  const y = finiteOr(attrs.y, element.y);
+  const width = Math.max(Math.abs(finiteOr(attrs.width, element.width) * scaleX), 1);
+  const height = Math.max(Math.abs(finiteOr(attrs.height, element.height) * scaleY), 1);
+  const rotation = finiteOr(attrs.rotation, element.rotation);
 
   if (element.type === 'line' || element.type === 'arrow' || element.type === 'freehand') {
     const points = element.points.map((point) => ({
       ...point,
-      x: point.x * scaleX,
-      y: point.y * scaleY,
+      x: finiteOr(point.x * scaleX, point.x),
+      y: finiteOr(point.y * scaleY, point.y),
     }));
     return {
       ...element,
-      x: attrs.x,
-      y: attrs.y,
+      x,
+      y,
       width,
       height,
-      rotation: attrs.rotation,
+      rotation,
       points,
       updatedAt: Date.now(),
     } as CanvasElement;
@@ -87,11 +96,11 @@ function applyTransform(element: CanvasElement, attrs: TransformResult): CanvasE
 
   return {
     ...element,
-    x: attrs.x,
-    y: attrs.y,
+    x,
+    y,
     width,
     height,
-    rotation: attrs.rotation,
+    rotation,
     updatedAt: Date.now(),
   } as CanvasElement;
 }
@@ -285,7 +294,12 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
     (id: string) => {
       if (!canWrite) return;
       const element = elementsById.get(id);
-      if (!element || (element.type !== 'text' && element.type !== 'sticky')) return;
+      if (
+        !element ||
+        (element.type !== 'text' && element.type !== 'sticky' && element.type !== 'code')
+      ) {
+        return;
+      }
       setEditingId(id);
       setSelection([id]);
     },
@@ -338,6 +352,11 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
       const world = pointerWorld(event);
       setCursor(world);
 
+      // A canvas press means the user is done typing. Closing here instead of
+      // relying on textarea blur prevents the trailing pointer/click event from
+      // silently dismissing the editor before the first keystroke.
+      if (editingId) setEditingId(null);
+
       const isMiddle = event.evt.button === 1;
       const isPan = tool === 'hand' || spaceHeld.current || isMiddle;
 
@@ -372,11 +391,12 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
         return;
       }
 
-      if (tool === 'text' || tool === 'sticky') {
+      if (tool === 'text' || tool === 'sticky' || tool === 'code') {
         const element = createElement(tool, {
           style: tool === 'sticky' ? { ...style, fill: '#F5E9D2' } : style,
           start: world,
           zIndex: nextZIndex(elements),
+          text: tool === 'code' ? '// Paste or write code here' : '',
         });
         upsertElements([element]);
         setSelection([element.id]);
@@ -424,6 +444,7 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
       setSelection,
       setTool,
       setEditingId,
+      editingId,
     ],
   );
 
@@ -633,6 +654,7 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
       if (key === 't' && canWrite) setTool('text');
       if (key === 's' && canWrite && !meta) setTool('sticky');
       if (key === 'i' && canWrite) setTool('image');
+      if (key === 'c' && canWrite && !meta) setTool('code');
 
       if (key === 'escape') {
         clearSelection();
@@ -752,7 +774,23 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
   async function onImageSelected(file: File): Promise<void> {
     if (!canWrite) return;
     try {
-      const uploaded = await boardsApi.upload(boardId, file);
+      let source: { src: string; width: number; height: number; assetId?: string };
+      let storedRemotely = true;
+      try {
+        const uploaded = await boardsApi.upload(boardId, file);
+        source = {
+          src: uploaded.url,
+          width: uploaded.width,
+          height: uploaded.height,
+          assetId: uploaded.id,
+        };
+      } catch {
+        // No object storage configured/reachable: keep the image usable by
+        // storing a compact data URL in the board CRDT itself.
+        source = await fileToInlineImage(file);
+        storedRemotely = false;
+      }
+
       const cameraState = useViewportStore.getState();
       const center = screenToWorld(
         { x: cameraState.width / 2, y: cameraState.height / 2 },
@@ -760,15 +798,16 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
       );
       const element = createElement('image', {
         style,
-        start: { x: center.x - uploaded.width / 2, y: center.y - uploaded.height / 2 },
+        start: { x: center.x - source.width / 2, y: center.y - source.height / 2 },
         zIndex: nextZIndex(elements),
-        src: uploaded.url,
-        assetId: uploaded.id,
+        src: source.src,
+        assetId: source.assetId ?? null,
       });
-      const sized = { ...element, width: uploaded.width, height: uploaded.height } as CanvasElement;
+      const sized = { ...element, width: source.width, height: source.height } as CanvasElement;
       upsertElements([sized]);
       setSelection([sized.id]);
       setTool('select');
+      if (!storedRemotely) showToast('Image added to this board locally.');
     } catch (cause) {
       showToast(cause instanceof Error ? cause.message : 'Image upload failed.');
     }
@@ -814,6 +853,9 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
           elements={activeVisible}
           stageRef={stageRef}
           draggable={canWrite && tool === 'select'}
+          interactive={tool === 'select'}
+          onSelect={selectElement}
+          onOpenEditor={openEditor}
           onTransformEnd={handleTransformEnd}
         />
         <OverlayLayer
@@ -826,7 +868,18 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
         />
       </Stage>
 
-      {editingElement ? (
+      {editingElement?.type === 'code' ? (
+        <CodeEditorOverlay
+          element={editingElement}
+          onChange={(patch) => {
+            if (!canWrite) return;
+            upsertElements([
+              { ...editingElement, ...patch, updatedAt: Date.now() } as CanvasElement,
+            ]);
+          }}
+          onClose={() => setEditingId(null)}
+        />
+      ) : editingElement ? (
         <TextEditorOverlay
           element={editingElement}
           onChange={(text) => {

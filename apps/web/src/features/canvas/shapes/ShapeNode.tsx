@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { CanvasElement } from '@syncboard/shared';
+import { CodeShape } from './CodeShape';
 import { EllipseShape } from './EllipseShape';
 import { ImageShape } from './ImageShape';
 import { PathShape } from './PathShape';
@@ -20,7 +21,16 @@ export const ShapeNode = memo(function ShapeNode({ element, ...props }: ShapeNod
     case 'ellipse':
       return <EllipseShape {...props} element={element} />;
     case 'frame':
-      return <RectangleShape {...props} element={{ ...element, type: 'rectangle', style: { ...element.style, fill: 'rgba(255,255,255,0.35)', dashed: true } }} />;
+      return (
+        <RectangleShape
+          {...props}
+          element={{
+            ...element,
+            type: 'rectangle',
+            style: { ...element.style, fill: 'rgba(255,255,255,0.35)', dashed: true },
+          }}
+        />
+      );
     case 'line':
     case 'arrow':
     case 'freehand':
@@ -31,5 +41,7 @@ export const ShapeNode = memo(function ShapeNode({ element, ...props }: ShapeNod
       return <StickyShape {...props} element={element} />;
     case 'image':
       return <ImageShape {...props} element={element} />;
+    case 'code':
+      return <CodeShape {...props} element={element} />;
   }
 });

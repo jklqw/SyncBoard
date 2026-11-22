@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   ArrowUpRight,
   Circle,
+  Code2,
   Eraser,
   Hand,
   Image as ImageIcon,
@@ -29,6 +30,7 @@ const TOOLS: Array<{ id: ToolId; label: string; shortcut: string; icon: ReactNod
   { id: 'text', label: 'Text', shortcut: 'T', icon: <Type size={16} /> },
   { id: 'sticky', label: 'Sticky', shortcut: 'S', icon: <StickyNote size={16} /> },
   { id: 'image', label: 'Image', shortcut: 'I', icon: <ImageIcon size={16} /> },
+  { id: 'code', label: 'Code', shortcut: 'C', icon: <Code2 size={16} /> },
 ];
 
 export function ToolDock() {

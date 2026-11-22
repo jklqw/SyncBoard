@@ -40,11 +40,22 @@ function serializeElement(element: CanvasElement): string {
     case 'text':
       return `<text ${transform} font-family="Inter, sans-serif" font-size="${element.fontSize}" fill="${escapeXml(element.style.stroke)}" opacity="${element.style.opacity}">${escapeXml(element.text)}</text>`;
     case 'sticky': {
-      const fill = element.tone === 'cool' ? '#DCE7EC' : element.tone === 'neutral' ? '#ECEAE5' : '#F5E9D2';
+      const fill =
+        element.tone === 'cool' ? '#DCE7EC' : element.tone === 'neutral' ? '#ECEAE5' : '#F5E9D2';
       return `<g ${transform}><rect width="${element.width}" height="${element.height}" fill="${fill}" stroke="rgba(24,24,27,0.1)" /><text x="12" y="28" font-family="Inter, sans-serif" font-size="16" fill="#3B3126">${escapeXml(element.text)}</text></g>`;
     }
     case 'image':
       return `<image ${transform} href="${escapeXml(element.src)}" width="${Math.abs(element.width)}" height="${Math.abs(element.height)}" opacity="${element.style.opacity}" />`;
+    case 'code': {
+      const lines = element.text
+        .split('\n')
+        .map(
+          (line, index) =>
+            `<text x="12" y="${38 + index * 17}" font-family="ui-monospace, monospace" font-size="12" fill="#D4D4D8">${escapeXml(line)}</text>`,
+        )
+        .join('');
+      return `<g ${transform}><rect width="${Math.abs(element.width)}" height="${Math.abs(element.height)}" rx="6" fill="#18181B" stroke="#3F3F46" /><rect width="${Math.abs(element.width)}" height="28" fill="#27272A" /><text x="10" y="18" font-family="Inter, sans-serif" font-size="11" fill="#E4E4E7">${escapeXml(element.title ?? 'Snippet')}</text>${lines}</g>`;
+    }
   }
 }
 

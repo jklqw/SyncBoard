@@ -39,13 +39,36 @@ describe('shared schemas and roles', () => {
     const arrow = parseElement({
       ...base,
       type: 'arrow',
-      points: [{ x: 0, y: 0 }, { x: 10, y: 10 }],
+      points: [
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+      ],
       startBinding: { elementId: 'r1', anchor: 'right' },
       endBinding: null,
     });
     expect(arrow.type).toBe('arrow');
     if (arrow.type === 'arrow') expect(arrow.startBinding?.anchor).toBe('right');
     expect(() => parseElement({ ...base, type: 'arrow', points: [{ x: 0, y: 0 }] })).toThrow();
+  });
+
+  it('parses collaborative code elements and inline image fallbacks', () => {
+    const code = parseElement({
+      ...base,
+      type: 'code',
+      text: 'const answer = 42;',
+      language: 'typescript',
+      title: 'Example',
+    });
+    expect(code.type).toBe('code');
+    if (code.type === 'code') expect(code.language).toBe('typescript');
+    expect(() => parseElement({ ...base, type: 'code', text: 'x' })).toThrow();
+
+    const image = parseElement({
+      ...base,
+      type: 'image',
+      src: `data:image/webp;base64,${'A'.repeat(1000)}`,
+    });
+    expect(image.type).toBe('image');
   });
 
   it('enforces the role hierarchy', () => {

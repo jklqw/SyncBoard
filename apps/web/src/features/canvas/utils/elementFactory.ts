@@ -8,7 +8,10 @@ export function newId(): string {
 
 /** Timestamp-prefixed, lexicographically sortable key; reordering swaps with a neighbour. */
 export function nextZIndex(elements: CanvasElement[]): string {
-  const max = elements.reduce((value, element) => (element.zIndex > value ? element.zIndex : value), '');
+  const max = elements.reduce(
+    (value, element) => (element.zIndex > value ? element.zIndex : value),
+    '',
+  );
   const stamp = Date.now().toString(36).padStart(9, '0');
   const suffix = nanoid(5);
   const candidate = `${stamp}${suffix}`;
@@ -23,6 +26,8 @@ export interface NewElementOptions {
   text?: string;
   src?: string;
   assetId?: string | null;
+  language?: string;
+  title?: string;
 }
 
 export function createElement(type: ElementType, options: NewElementOptions): CanvasElement {
@@ -47,9 +52,23 @@ export function createElement(type: ElementType, options: NewElementOptions): Ca
     case 'frame':
       return { ...base, type: 'frame', name: 'Frame' };
     case 'line':
-      return { ...base, type: 'line', points: [{ x: 0, y: 0 }, { x: 0, y: 0 }] };
+      return {
+        ...base,
+        type: 'line',
+        points: [
+          { x: 0, y: 0 },
+          { x: 0, y: 0 },
+        ],
+      };
     case 'arrow':
-      return { ...base, type: 'arrow', points: [{ x: 0, y: 0 }, { x: 0, y: 0 }] };
+      return {
+        ...base,
+        type: 'arrow',
+        points: [
+          { x: 0, y: 0 },
+          { x: 0, y: 0 },
+        ],
+      };
     case 'freehand':
       return { ...base, type: 'freehand', points: [{ x: 0, y: 0 }], simulatePressure: false };
     case 'text':
@@ -80,10 +99,25 @@ export function createElement(type: ElementType, options: NewElementOptions): Ca
         src: options.src ?? '',
         ...(options.assetId ? { assetId: options.assetId } : {}),
       };
+    case 'code':
+      return {
+        ...base,
+        type: 'code',
+        width: 420,
+        height: 260,
+        text: options.text ?? '// Write code here',
+        language: options.language ?? 'typescript',
+        title: options.title ?? 'Snippet',
+      };
   }
 }
 
-export function duplicateElement(element: CanvasElement, dx: number, dy: number, zIndex: string): CanvasElement {
+export function duplicateElement(
+  element: CanvasElement,
+  dx: number,
+  dy: number,
+  zIndex: string,
+): CanvasElement {
   const copy = {
     ...element,
     id: newId(),
