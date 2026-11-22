@@ -18,6 +18,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     );
   }
   if (!user) {
+    // A share/watch link is a narrowly scoped, server-validated credential.
+    // Let it through to the board route; all API and WS access is still
+    // checked against the token by the server.
+    const shareToken = new URLSearchParams(location.search).get('token');
+    if (location.pathname.startsWith('/board/') && shareToken) return children;
     return (
       <Navigate
         to="/login"

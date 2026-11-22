@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { Role } from '@prisma/client';
 
 export class InviteMemberDto {
@@ -23,6 +23,8 @@ export class UpdateMemberRoleDto {
 }
 
 export class ShareLinkDto {
-  @IsEnum(Role)
+  @IsIn([Role.VIEWER, Role.COMMENTER, Role.EDITOR], {
+    message: 'role must be VIEWER, COMMENTER, or EDITOR',
+  })
   role!: Role;
 }

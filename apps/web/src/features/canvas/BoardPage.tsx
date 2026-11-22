@@ -14,9 +14,17 @@ import { PropertiesInspector } from './PropertiesInspector';
 import { ToolDock } from './ToolDock';
 import { VersionHistoryDrawer } from './VersionHistoryDrawer';
 
-function BoardWorkspace({ board, onBoardChange }: { board: BoardSummary; onBoardChange: (board: BoardSummary) => void }) {
+function BoardWorkspace({
+  board,
+  watching,
+  onBoardChange,
+}: {
+  board: BoardSummary;
+  watching: boolean;
+  onBoardChange: (board: BoardSummary) => void;
+}) {
   const stageRef = useRef<Konva.Stage | null>(null);
-  const { elements, canWrite } = useCollab();
+  const { elements, canWrite, role } = useCollab();
   const selection = useToolStore((state) => state.selection);
   const modal = useUiStore((state) => state.modal);
   const closeModal = useUiStore((state) => state.closeModal);
@@ -38,13 +46,25 @@ function BoardWorkspace({ board, onBoardChange }: { board: BoardSummary; onBoard
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[var(--sb-canvas)]">
+      {watching ? (
+        <div
+          role="status"
+          className="sb-pill pointer-events-none absolute left-1/2 top-[68px] z-30 -translate-x-1/2 px-3 py-1.5 text-[12px]"
+        >
+          Watching in read-only mode — your cursor is hidden from editors
+        </div>
+      ) : null}
       <CanvasStage boardId={board.id} stageRef={stageRef} />
-      <BoardChrome board={board} stageRef={stageRef} onTitleChange={(title) => void onTitleChange(title)} />
+      <BoardChrome
+        board={board}
+        stageRef={stageRef}
+        onTitleChange={(title) => void onTitleChange(title)}
+      />
       <ToolDock />
       <PropertiesInspector selected={selected} />
       <CommentsPanel
         boardId={board.id}
-        role={board.role}
+        role={role}
         open={modal === 'comments'}
         onClose={closeModal}
       />
@@ -68,6 +88,7 @@ export function BoardPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const shareToken = searchParams.get('token');
+  const watching = searchParams.get('watch') === '1';
   const [board, setBoard] = useState<BoardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -118,8 +139,8 @@ export function BoardPage() {
   }
 
   return (
-    <CollabProvider boardId={board.id} role={board.role}>
-      <BoardWorkspace board={board} onBoardChange={setBoard} />
+    <CollabProvider boardId={board.id} role={board.role} watching={watching}>
+      <BoardWorkspace board={board} watching={watching} onBoardChange={setBoard} />
     </CollabProvider>
   );
 }

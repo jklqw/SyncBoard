@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   CanActivate,
   ExecutionContext,
@@ -36,10 +37,43 @@ export class JwtAuthGuard implements CanActivate {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
+  /**
+   * Watch links must work without an account. Only the two board-scoped read
+   * endpoints needed to boot a guest session accept a bare share token; every
+   * mutating route still requires a real access token and board role.
+   */
+  private tryGuestShareAccess(req: Request): AuthenticatedUser | null {
+    const query = req.query as Record<string, unknown>;
+    const shareToken = query.token ?? query.shareToken;
+    if (typeof shareToken !== 'string' || shareToken.length < 16) return null;
+
+    const route = (req.route as { path?: string } | undefined)?.path ?? '';
+    const readOnlyRoute =
+      (req.method === 'GET' && route.endsWith('/:id')) ||
+      (req.method === 'POST' && route.endsWith('/:id/ws-ticket'));
+    if (!readOnlyRoute) return null;
+
+    const id = createHash('sha256').update(shareToken).digest('hex').slice(0, 24);
+    return {
+      id: `guest_${id}`,
+      email: '',
+      username: 'guest',
+      displayName: 'Guest',
+      avatarColor: '#6B8CAE',
+    };
+  }
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const token = extractBearerToken(req);
-    if (!token) throw new UnauthorizedException('Missing bearer token');
+    if (!token) {
+      const guest = this.tryGuestShareAccess(req);
+      if (guest) {
+        setRequestUser(req, guest);
+        return true;
+      }
+      throw new UnauthorizedException('Missing bearer token');
+    }
 
     let payload: AccessTokenPayload;
     try {

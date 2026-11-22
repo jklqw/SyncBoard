@@ -112,9 +112,10 @@ export class PermissionsService {
       update: { role: dto.role },
     });
 
-    if (previous && ROLE_RANK[previous.role] > ROLE_RANK[dto.role]) {
+    if (previous && previous.role !== dto.role) {
       await this.publishRevocation(boardId, user.id, {
-        reason: 'role_downgraded',
+        reason:
+          ROLE_RANK[dto.role] > ROLE_RANK[previous.role] ? 'role_upgraded' : 'role_downgraded',
         newRole: dto.role,
       });
     }
@@ -171,9 +172,9 @@ export class PermissionsService {
       },
     });
 
-    if (ROLE_RANK[existing.role] > ROLE_RANK[dto.role]) {
+    if (existing.role !== dto.role) {
       await this.publishRevocation(boardId, userId, {
-        reason: 'role_changed',
+        reason: ROLE_RANK[dto.role] > ROLE_RANK[existing.role] ? 'role_upgraded' : 'role_changed',
         newRole: dto.role,
       });
     }

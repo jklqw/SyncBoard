@@ -20,11 +20,19 @@ import { YjsWebSocketProvider } from './YjsWebSocketProvider';
 import { useIndexedDbPersistence } from './offline';
 import { usePresence } from './usePresence';
 import { useRemoteCursors } from './useRemoteCursors';
-import type { AwarenessState, ConnectionStatus, CursorState, PeerState, PresenceUser } from './types';
+import type {
+  AwarenessState,
+  ConnectionStatus,
+  CursorState,
+  PeerState,
+  PresenceUser,
+} from './types';
 
 interface CollabContextValue extends YDocApi {
   awareness: Awareness;
   status: ConnectionStatus;
+  role: Role;
+  watching: boolean;
   canWrite: boolean;
   user: PresenceUser;
   peers: PeerState[];
@@ -48,10 +56,12 @@ function hashColor(id: string): string {
 export function CollabProvider({
   boardId,
   role,
+  watching = false,
   children,
 }: {
   boardId: string;
   role: Role;
+  watching?: boolean;
   children: ReactNode;
 }) {
   const { user } = useAuth();
@@ -63,7 +73,9 @@ export function CollabProvider({
     return { doc: ydoc.doc, awareness: next };
   }, [ydoc.doc]);
 
-  const canWrite = canWriteDocument(liveRole);
+  // Watch mode is a local, read-only lens: even an owner who opens a watch
+  // link cannot edit or reveal a cursor until they leave watch mode.
+  const canWrite = canWriteDocument(liveRole) && !watching;
   const peers = usePresence(awareness);
   const remoteCursors = useRemoteCursors(peers);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
@@ -71,14 +83,17 @@ export function CollabProvider({
   const setPresentingUi = useUiStore((state) => state.setPresenting);
   const setFollowingName = useUiStore((state) => state.setFollowingName);
 
-  const presenceUser = useMemo<PresenceUser>(
-    () => ({
-      id: user?.id ?? 'anonymous',
+  const guestId = useRef<string | null>(null);
+  if (!guestId.current) guestId.current = `guest-${crypto.randomUUID().slice(0, 8)}`;
+
+  const presenceUser = useMemo<PresenceUser>(() => {
+    const id = user?.id ?? guestId.current ?? 'guest';
+    return {
+      id,
       name: user?.displayName ?? 'Guest',
-      color: user?.avatarColor ?? hashColor(user?.id ?? 'anonymous'),
-    }),
-    [user],
-  );
+      color: user?.avatarColor ?? hashColor(id),
+    };
+  }, [user]);
 
   useIndexedDbPersistence(doc, boardId);
 
@@ -89,10 +104,11 @@ export function CollabProvider({
       selection: [],
       tool: 'select',
       presenting: false,
+      watching,
       viewport: null,
     } satisfies AwarenessState);
     return () => awareness.setLocalState(null);
-  }, [awareness, presenceUser]);
+  }, [awareness, presenceUser, watching]);
 
   useEffect(() => {
     const provider = new YjsWebSocketProvider({
@@ -121,7 +137,9 @@ export function CollabProvider({
   const presenter = useMemo(() => peers.find((peer) => peer.presenting) ?? null, [peers]);
 
   useEffect(() => {
-    setFollowingName(presenter && presenter.user?.id !== presenceUser.id ? (presenter.user?.name ?? null) : null);
+    setFollowingName(
+      presenter && presenter.user?.id !== presenceUser.id ? (presenter.user?.name ?? null) : null,
+    );
   }, [presenter, presenceUser.id, setFollowingName]);
 
   const lastCursorAt = useRef(0);
@@ -129,17 +147,21 @@ export function CollabProvider({
 
   const setCursor = useCallback(
     (cursor: CursorState | null) => {
+      // A watcher has no cursor as far as the room is concerned.
+      if (watching) return;
       const now = performance.now();
       if (cursor && now - lastCursorAt.current < 1000 / 30) return;
       lastCursorAt.current = now;
       awareness.setLocalStateField('cursor', cursor);
     },
-    [awareness],
+    [awareness, watching],
   );
 
   const setSelection = useCallback(
-    (ids: string[]) => awareness.setLocalStateField('selection', ids),
-    [awareness],
+    (ids: string[]) => {
+      if (!watching) awareness.setLocalStateField('selection', ids);
+    },
+    [awareness, watching],
   );
 
   const setTool = useCallback(
@@ -149,10 +171,11 @@ export function CollabProvider({
 
   const setPresenting = useCallback(
     (active: boolean) => {
+      if (watching) return;
       awareness.setLocalStateField('presenting', active);
       setPresentingUi(active);
     },
-    [awareness, setPresentingUi],
+    [awareness, setPresentingUi, watching],
   );
 
   const broadcastViewport = useCallback(
@@ -171,6 +194,8 @@ export function CollabProvider({
       ...ydoc,
       awareness,
       status,
+      role: liveRole,
+      watching,
       canWrite,
       user: presenceUser,
       peers,
@@ -186,6 +211,8 @@ export function CollabProvider({
       ydoc,
       awareness,
       status,
+      liveRole,
+      watching,
       canWrite,
       presenceUser,
       peers,

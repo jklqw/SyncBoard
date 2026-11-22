@@ -46,19 +46,26 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
 
   async function inviteUser(event: FormEvent): Promise<void> {
     event.preventDefault();
-    if (!board || !invite.trim()) return;
+    await inviteWithRole(inviteRole);
+  }
+
+  async function inviteWithRole(role: Role): Promise<void> {
+    if (!board || !invite.trim()) {
+      showToast('Enter an email or username first');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const value = invite.trim();
       await boardsApi.addMember(board.id, {
         ...(value.includes('@') ? { email: value } : { username: value }),
-        role: inviteRole,
+        role,
       });
       setInvite('');
       await load();
       onChanged?.();
-      showToast('Invitation sent');
+      showToast(role === 'EDITOR' ? 'Edit access granted' : 'Invitation sent');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not invite that user.');
     } finally {
@@ -122,11 +129,13 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
     }
   }
 
-  async function copyLink(): Promise<void> {
+  async function copyLink(watch = false): Promise<void> {
     if (!link) return;
     try {
-      await navigator.clipboard.writeText(new URL(link.url, window.location.origin).toString());
-      showToast('Link copied');
+      const url = new URL(link.url, window.location.origin);
+      if (watch) url.searchParams.set('watch', '1');
+      await navigator.clipboard.writeText(url.toString());
+      showToast(watch ? 'Watch link copied' : 'Link copied');
     } catch {
       showToast('Copy failed — select the link manually');
     }
@@ -176,6 +185,17 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
                 <UserPlus size={15} />
               </Button>
             </div>
+            <button
+              type="button"
+              className="sb-btn sb-btn--secondary mt-1 self-start px-2 py-1 text-[11px]"
+              disabled={busy}
+              onClick={() => {
+                setInviteRole('EDITOR');
+                void inviteWithRole('EDITOR');
+              }}
+            >
+              Give edit access to a registered user
+            </button>
           </form>
 
           {error ? (
@@ -269,6 +289,13 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
                   />
                   <Button size="sm" onClick={() => void copyLink()} aria-label="Copy invite link">
                     <Copy size={14} /> Copy
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => void copyLink(true)}
+                    aria-label="Copy watch link"
+                  >
+                    Watch link
                   </Button>
                   <Button size="sm" variant="danger" onClick={() => void disableLink()}>
                     Disable

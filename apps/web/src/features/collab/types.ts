@@ -24,6 +24,7 @@ export interface PeerState {
   selection: string[];
   tool: ToolId | null;
   presenting: boolean;
+  watching: boolean;
   viewport: Camera | null;
 }
 
@@ -33,5 +34,6 @@ export interface AwarenessState {
   selection: string[];
   tool: ToolId;
   presenting: boolean;
+  watching: boolean;
   viewport: Camera | null;
 }

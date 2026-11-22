@@ -12,6 +12,7 @@ function asState(value: unknown): AwarenessState | null {
     selection: Array.isArray(state.selection) ? state.selection : [],
     tool: state.tool ?? 'select',
     presenting: state.presenting === true,
+    watching: state.watching === true,
     viewport: state.viewport ?? null,
   };
 }
@@ -33,6 +34,7 @@ export function usePresence(awareness: Awareness): PeerState[] {
           selection: parsed.selection,
           tool: parsed.tool,
           presenting: parsed.presenting,
+          watching: parsed.watching,
           viewport: parsed.viewport,
         });
       });

@@ -61,31 +61,40 @@ export const OverlayLayer = memo(function OverlayLayer({
       )}
 
       {peers.flatMap((peer) =>
-        peer.selection.map((id) => {
-          const element = byId.get(id);
-          if (!element) return null;
-          const bounds = getElementBounds(element);
-          return (
-            <Rect
-              key={`sel-${peer.clientId}-${id}`}
-              x={bounds.minX - 4 * inverse}
-              y={bounds.minY - 4 * inverse}
-              width={bounds.maxX - bounds.minX + 8 * inverse}
-              height={bounds.maxY - bounds.minY + 8 * inverse}
-              stroke={peer.user?.color ?? '#6B8CAE'}
-              strokeWidth={1.5 * inverse}
-              dash={[5 * inverse, 4 * inverse]}
-            />
-          );
-        }),
+        peer.watching
+          ? []
+          : peer.selection.map((id) => {
+              const element = byId.get(id);
+              if (!element) return null;
+              const bounds = getElementBounds(element);
+              return (
+                <Rect
+                  key={`sel-${peer.clientId}-${id}`}
+                  x={bounds.minX - 4 * inverse}
+                  y={bounds.minY - 4 * inverse}
+                  width={bounds.maxX - bounds.minX + 8 * inverse}
+                  height={bounds.maxY - bounds.minY + 8 * inverse}
+                  stroke={peer.user?.color ?? '#6B8CAE'}
+                  strokeWidth={1.5 * inverse}
+                  dash={[5 * inverse, 4 * inverse]}
+                />
+              );
+            }),
       )}
 
       {peers.flatMap((peer) => {
+        if (peer.watching) return [];
         const cursor = remoteCursors.get(peer.clientId);
         if (!cursor) return null;
         const name = peer.user?.name ?? 'Collaborator';
         return (
-          <Group key={`cursor-${peer.clientId}`} x={cursor.x} y={cursor.y} scaleX={inverse} scaleY={inverse}>
+          <Group
+            key={`cursor-${peer.clientId}`}
+            x={cursor.x}
+            y={cursor.y}
+            scaleX={inverse}
+            scaleY={inverse}
+          >
             <Line
               points={[0, 0, 0, 19, 4.5, 14, 7.5, 21, 10.5, 19.5, 7.5, 13, 13, 12]}
               closed
@@ -93,8 +102,22 @@ export const OverlayLayer = memo(function OverlayLayer({
               stroke="#FFFFFF"
               strokeWidth={1}
             />
-            <Rect x={12} y={19} width={Math.max(28, name.length * 6.2 + 12)} height={20} cornerRadius={5} fill={peer.user?.color ?? '#6B8CAE'} />
-            <Text x={17} y={23} text={name} fontSize={11} fontFamily="Inter, sans-serif" fill="#FFFFFF" />
+            <Rect
+              x={12}
+              y={19}
+              width={Math.max(28, name.length * 6.2 + 12)}
+              height={20}
+              cornerRadius={5}
+              fill={peer.user?.color ?? '#6B8CAE'}
+            />
+            <Text
+              x={17}
+              y={23}
+              text={name}
+              fontSize={11}
+              fontFamily="Inter, sans-serif"
+              fill="#FFFFFF"
+            />
           </Group>
         );
       })}

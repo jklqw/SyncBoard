@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  ChevronLeft,
-  Download,
-  History,
-  MessageCircle,
-  Presentation,
-  Share2,
-} from 'lucide-react';
+import { ChevronLeft, Download, History, MessageCircle, Presentation, Share2 } from 'lucide-react';
 import type { RefObject } from 'react';
 import type Konva from 'konva';
 import type { BoardSummary } from '@syncboard/shared';
@@ -55,7 +48,8 @@ export function BoardChrome({ board, stageRef, onTitleChange }: BoardChromeProps
     titleRef.current = board.title;
   }, [board.title]);
 
-  const others = peers.filter((peer) => peer.user);
+  // Watchers are intentionally not surfaced as live collaborators in the UI.
+  const others = peers.filter((peer) => peer.user && !peer.watching);
 
   return (
     <>
@@ -99,7 +93,9 @@ export function BoardChrome({ board, stageRef, onTitleChange }: BoardChromeProps
               />
             ))}
             {others.length > 5 ? (
-              <span className="sb-mono ml-1 text-[11px] text-[var(--sb-secondary)]">+{others.length - 5}</span>
+              <span className="sb-mono ml-1 text-[11px] text-[var(--sb-secondary)]">
+                +{others.length - 5}
+              </span>
             ) : null}
           </div>
           <div className="sb-divider" />
@@ -137,9 +133,11 @@ export function BoardChrome({ board, stageRef, onTitleChange }: BoardChromeProps
                 onSelect: () => {
                   const stage = stageRef.current;
                   if (!stage) return;
-                  void exportPdf(elements, stage, `${board.title || 'syncboard'}.pdf`).catch((cause) => {
-                    showToast(cause instanceof Error ? cause.message : 'PDF export failed.');
-                  });
+                  void exportPdf(elements, stage, `${board.title || 'syncboard'}.pdf`).catch(
+                    (cause) => {
+                      showToast(cause instanceof Error ? cause.message : 'PDF export failed.');
+                    },
+                  );
                 },
               },
             ]}

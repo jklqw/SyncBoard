@@ -16,11 +16,16 @@ export function useRemoteCursors(peers: PeerState[]): Map<number, CursorState> {
   useEffect(() => {
     const active = new Set<number>();
     for (const peer of peers) {
-      if (!peer.cursor) continue;
+      // Watchers must stay invisible to editors, including their pointers.
+      if (peer.watching || !peer.cursor) continue;
       active.add(peer.clientId);
       const existing = tracked.current.get(peer.clientId);
       if (existing) existing.target = peer.cursor;
-      else tracked.current.set(peer.clientId, { current: { ...peer.cursor }, target: { ...peer.cursor } });
+      else
+        tracked.current.set(peer.clientId, {
+          current: { ...peer.cursor },
+          target: { ...peer.cursor },
+        });
     }
     for (const clientId of [...tracked.current.keys()]) {
       if (!active.has(clientId)) tracked.current.delete(clientId);
