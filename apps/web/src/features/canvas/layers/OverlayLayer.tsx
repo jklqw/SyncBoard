@@ -61,7 +61,7 @@ export const OverlayLayer = memo(function OverlayLayer({
       )}
 
       {peers.flatMap((peer) =>
-        peer.watching
+        peer.watching || peer.role === 'VIEWER'
           ? []
           : peer.selection.map((id) => {
               const element = byId.get(id);
@@ -83,7 +83,7 @@ export const OverlayLayer = memo(function OverlayLayer({
       )}
 
       {peers.flatMap((peer) => {
-        if (peer.watching) return [];
+        if (peer.watching || peer.role === 'VIEWER') return [];
         const cursor = remoteCursors.get(peer.clientId);
         if (!cursor) return null;
         const name = peer.user?.name ?? 'Collaborator';

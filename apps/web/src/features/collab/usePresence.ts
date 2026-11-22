@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { Awareness } from 'y-protocols/awareness';
+import type { Role } from '@syncboard/shared';
 import type { AwarenessState, PeerState } from './types';
+
+const ROLES: Role[] = ['OWNER', 'EDITOR', 'COMMENTER', 'VIEWER'];
+
+function asRole(value: unknown): Role | null {
+  return typeof value === 'string' && (ROLES as string[]).includes(value) ? (value as Role) : null;
+}
 
 function asState(value: unknown): AwarenessState | null {
   if (typeof value !== 'object' || value === null) return null;
@@ -8,6 +15,7 @@ function asState(value: unknown): AwarenessState | null {
   if (!state.user || typeof state.user !== 'object') return null;
   return {
     user: state.user,
+    role: asRole(state.role) ?? 'VIEWER',
     cursor: state.cursor ?? null,
     selection: Array.isArray(state.selection) ? state.selection : [],
     tool: state.tool ?? 'select',
@@ -30,6 +38,7 @@ export function usePresence(awareness: Awareness): PeerState[] {
         next.push({
           clientId,
           user: parsed.user,
+          role: parsed.role,
           cursor: parsed.cursor,
           selection: parsed.selection,
           tool: parsed.tool,

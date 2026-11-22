@@ -16,8 +16,8 @@ export function useRemoteCursors(peers: PeerState[]): Map<number, CursorState> {
   useEffect(() => {
     const active = new Set<number>();
     for (const peer of peers) {
-      // Watchers must stay invisible to editors, including their pointers.
-      if (peer.watching || !peer.cursor) continue;
+      // Watchers and viewers must stay invisible to editors, including pointers.
+      if (peer.watching || peer.role === 'VIEWER' || !peer.cursor) continue;
       active.add(peer.clientId);
       const existing = tracked.current.get(peer.clientId);
       if (existing) existing.target = peer.cursor;

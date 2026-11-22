@@ -10,9 +10,9 @@ import {
 } from 'react';
 import { Awareness } from 'y-protocols/awareness';
 import type { Role, ToolId } from '@syncboard/shared';
-import { canWriteDocument } from '@syncboard/shared';
+import { canWriteDocument, roleAtLeast } from '@syncboard/shared';
 import { useAuth } from '../../app/AuthProvider';
-import type { Camera } from '../../stores/useViewportStore';
+import { cameraOf, useViewportStore, type Camera } from '../../stores/useViewportStore';
 import { useUiStore } from '../../stores/useUiStore';
 import { PRESENCE_COLORS } from '@syncboard/shared';
 import { useYDoc, type YDocApi } from './useYDoc';
@@ -76,6 +76,8 @@ export function CollabProvider({
   // Watch mode is a local, read-only lens: even an owner who opens a watch
   // link cannot edit or reveal a cursor until they leave watch mode.
   const canWrite = canWriteDocument(liveRole) && !watching;
+  // Viewers can read and follow, but their pointers/selection are not broadcast.
+  const canShowPresence = !watching && roleAtLeast(liveRole, 'COMMENTER');
   const peers = usePresence(awareness);
   const remoteCursors = useRemoteCursors(peers);
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
@@ -97,9 +99,15 @@ export function CollabProvider({
 
   useIndexedDbPersistence(doc, boardId);
 
+  const liveRoleRef = useRef(liveRole);
+  useEffect(() => {
+    liveRoleRef.current = liveRole;
+  }, [liveRole]);
+
   useEffect(() => {
     awareness.setLocalState({
       user: presenceUser,
+      role: liveRoleRef.current,
       cursor: null,
       selection: [],
       tool: 'select',
@@ -109,6 +117,24 @@ export function CollabProvider({
     } satisfies AwarenessState);
     return () => awareness.setLocalState(null);
   }, [awareness, presenceUser, watching]);
+
+  useEffect(() => {
+    awareness.setLocalStateField('role', liveRole);
+  }, [awareness, liveRole]);
+
+  useEffect(() => {
+    if (canShowPresence) return;
+    awareness.setLocalStateField('cursor', null);
+    awareness.setLocalStateField('selection', []);
+  }, [awareness, canShowPresence]);
+
+  useEffect(() => {
+    if (canWrite) return;
+    if (awareness.getLocalState()?.['presenting'] !== true) return;
+    awareness.setLocalStateField('presenting', false);
+    awareness.setLocalStateField('viewport', null);
+    setPresentingUi(false);
+  }, [awareness, canWrite, setPresentingUi]);
 
   useEffect(() => {
     const provider = new YjsWebSocketProvider({
@@ -137,31 +163,32 @@ export function CollabProvider({
   const presenter = useMemo(() => peers.find((peer) => peer.presenting) ?? null, [peers]);
 
   useEffect(() => {
-    setFollowingName(
-      presenter && presenter.user?.id !== presenceUser.id ? (presenter.user?.name ?? null) : null,
-    );
-  }, [presenter, presenceUser.id, setFollowingName]);
+    // usePresence already excludes the local client, so any presenting peer is
+    // somebody else's view — even when both tabs are logged into the same account.
+    setFollowingName(presenter ? (presenter.user?.name ?? null) : null);
+  }, [presenter, setFollowingName]);
 
   const lastCursorAt = useRef(0);
   const lastViewportAt = useRef(0);
 
   const setCursor = useCallback(
     (cursor: CursorState | null) => {
-      // A watcher has no cursor as far as the room is concerned.
-      if (watching) return;
+      // Watchers and viewers have no cursor as far as the room is concerned.
+      if (!canShowPresence) return;
       const now = performance.now();
       if (cursor && now - lastCursorAt.current < 1000 / 30) return;
       lastCursorAt.current = now;
       awareness.setLocalStateField('cursor', cursor);
     },
-    [awareness, watching],
+    [awareness, canShowPresence],
   );
 
   const setSelection = useCallback(
     (ids: string[]) => {
-      if (!watching) awareness.setLocalStateField('selection', ids);
+      if (!canShowPresence) return;
+      awareness.setLocalStateField('selection', ids);
     },
-    [awareness, watching],
+    [awareness, canShowPresence],
   );
 
   const setTool = useCallback(
@@ -171,11 +198,20 @@ export function CollabProvider({
 
   const setPresenting = useCallback(
     (active: boolean) => {
-      if (watching) return;
-      awareness.setLocalStateField('presenting', active);
+      if (!canWrite) return;
+      const current = awareness.getLocalState();
+      if (!current) return;
+      // Publish the current camera in the same awareness frame as the mode flag.
+      // Followers can then jump to the presenter's view instantly, without
+      // waiting for the first pan/zoom after the toggle.
+      awareness.setLocalState({
+        ...current,
+        presenting: active,
+        viewport: active ? cameraOf(useViewportStore.getState()) : null,
+      });
       setPresentingUi(active);
     },
-    [awareness, setPresentingUi, watching],
+    [awareness, canWrite, setPresentingUi],
   );
 
   const broadcastViewport = useCallback(

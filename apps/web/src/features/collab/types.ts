@@ -1,4 +1,4 @@
-import type { ToolId } from '@syncboard/shared';
+import type { Role, ToolId } from '@syncboard/shared';
 import type { Camera } from '../../stores/useViewportStore';
 
 export const LOCAL_ORIGIN = 'syncboard-local';
@@ -20,6 +20,7 @@ export interface CursorState {
 export interface PeerState {
   clientId: number;
   user: PresenceUser | null;
+  role: Role | null;
   cursor: CursorState | null;
   selection: string[];
   tool: ToolId | null;
@@ -30,6 +31,7 @@ export interface PeerState {
 
 export interface AwarenessState {
   user: PresenceUser;
+  role: Role;
   cursor: CursorState | null;
   selection: string[];
   tool: ToolId;
