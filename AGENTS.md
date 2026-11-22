@@ -25,7 +25,9 @@ Implement the complete **SyncBoard** production-grade collaborative whiteboard d
 ## Conventions
 
 - TypeScript strict everywhere; `pnpm` workspaces + Turborepo.
-- Conventional commits only (`feat`, `fix`, `perf`, `security`, `refactor`, `test`, `docs`, `chore`, `ci`).
+- Conventional commits only; local `type-enum` allows `build`, `chore`, `ci`, `docs`, `feat`, `fix`,
+  `perf`, `refactor`, `revert`, `style`, `test`. `security` is rejected by commitlint — use `fix`
+  for security patches unless the config is updated.
 - One concern per commit, matching GUIDE.md commit numbers exactly where practical.
 - UI: warm paper `#FAF9F6`, charcoal ink `#18181B`, cobalt `#2563EB`, hairline borders, no AI-slop gradients.
 - Never commit secrets; only `.env.example` with placeholders.
@@ -34,15 +36,16 @@ Implement the complete **SyncBoard** production-grade collaborative whiteboard d
 ## Git state (as of 2026-11-22 end of session)
 
 ```
+747c7cc fix(collab): sanitize viewer presence on the server
+dfc5ab4 fix(collab): hide viewer cursors and follow presenters immediately
+a18884a feat(canvas): color code syntax in blocks and editor
+88d6274 docs(memory): include latest verification commit in state log
 5bd66ed docs(memory): record canvas and sharing verification
 016b0a6 feat(share): add no-login watch mode and edit grants
-8959338 feat(canvas): restore editing and add code and image features
-86b244d fix(collab): preserve element fields when updating CRDT
-a60a3bb docs(memory): record share link, pen, sync and menu fixes
 ```
 
-Worktree was clean after these commits. All checks green: `pnpm lint`, `pnpm typecheck`,
-`pnpm build`, `pnpm test` (11 shared unit tests).
+Worktree is clean after these commits. All checks green: `pnpm lint`, `pnpm typecheck`,
+`pnpm build`, `pnpm test` (11 shared + 3 web + 1 server unit tests).
 
 ## Git state (historical, 2026-11-21 evening)
 
@@ -72,14 +75,15 @@ fbfa8c7 chore(repo): initialize pnpm Turborepo workspace, git hygiene, and env t
 
 ## Progress journal
 
-| Date       | Phase        | Status                        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ---------- | ------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-21 | 0            | done                          | Commits 1–4: monorepo, specs/tooling/husky, docker-compose dev infra.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| 2026-11-21 | 1            | done                          | Commits 5–7: shared Zod schemas + geometry, Prisma schema + offline-generated init migration, report §2.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| 2026-11-21 | unit tests   | done                          | Shared geometry/schema/RBAC unit tests committed (`4d108bf`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| 2026-11-21 | 2–7          | **code complete, atomicized** | All WIP committed in 16 thematic commits (8 new + prior 8). Missing server bootstrap (main/app module/health/collab.module/uploads), contract mismatches (GET /boards/:id, comment/member/snapshot DTOs, share URL), WS framing bug, and Y.Doc base/props→flat schema mismatch all fixed. `pnpm install` took ~28 min (registry very slow). **Verified:** shared+server+web `tsc` clean, `pnpm build` green (web+server+shared), `pnpm test` green (10 shared unit tests; server/web have no tests yet). **NOT verified:** `pnpm lint` (@eslint/js was missing from root devDeps — install in progress), integration/E2E/load (Docker Hub 403 still blocks Postgres/Redis/MinIO).                                                                                                                                                |
-| 2026-11-22 | bugfixes     | done                          | Four commits after `dae432f`: `7520428` invite links survive login/register and WS role rechecks (added `GET /boards/:id/share-link`, share token in WS ticket/gateway, full-path redirect state), `d5607bb` sync-step1 no longer double-unwraps the classified state vector, `c4c3e59` pen stays active after each stroke, `6b36cf4` dashboard three-dot menu no longer clipped by `overflow-hidden` on the board card. Live Chrome verified: link-only guest joins `as VIEWER` and stays `Connected`, pen still `aria-pressed=true` after two strokes, all six menu items hit-testable. `pnpm lint/typecheck/build/test` all green; worktree clean.                                                                                                                                                                            |
-| 2026-11-22 | canvas/share | done                          | Three commits (`86b244d`, `8959338`, `016b0a6`). Root cause of typing/move-disappearance found: `upsertElements` iterated an unintegrated `Y.Map`, which reports no keys, so every update erased all element fields. Replaced with plain encoded field objects + stale empty-map cleanup. Also restored selected-shape handlers/focus, added finite transform guards, bounded WebP inline image fallback when MinIO is unavailable, collaborative code blocks, no-login watch links with watcher cursors/selections/avatars hidden, explicit edit grants for registered users, and live role-upgrade frames. Browser-verified sticky/code typing, rectangle move persistence, image fallback, watch link read-only UI, edit-grant UI + API membership, and WS `role_upgraded` frame. `pnpm lint/typecheck/build/test` all green. |
+| Date       | Phase                        | Status                        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------- | ---------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-21 | 0                            | done                          | Commits 1–4: monorepo, specs/tooling/husky, docker-compose dev infra.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-11-21 | 1                            | done                          | Commits 5–7: shared Zod schemas + geometry, Prisma schema + offline-generated init migration, report §2.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| 2026-11-21 | unit tests                   | done                          | Shared geometry/schema/RBAC unit tests committed (`4d108bf`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-11-21 | 2–7                          | **code complete, atomicized** | All WIP committed in 16 thematic commits (8 new + prior 8). Missing server bootstrap (main/app module/health/collab.module/uploads), contract mismatches (GET /boards/:id, comment/member/snapshot DTOs, share URL), WS framing bug, and Y.Doc base/props→flat schema mismatch all fixed. `pnpm install` took ~28 min (registry very slow). **Verified:** shared+server+web `tsc` clean, `pnpm build` green (web+server+shared), `pnpm test` green (10 shared unit tests; server/web have no tests yet). **NOT verified:** `pnpm lint` (@eslint/js was missing from root devDeps — install in progress), integration/E2E/load (Docker Hub 403 still blocks Postgres/Redis/MinIO).                                                                                                                                                             |
+| 2026-11-22 | bugfixes                     | done                          | Four commits after `dae432f`: `7520428` invite links survive login/register and WS role rechecks (added `GET /boards/:id/share-link`, share token in WS ticket/gateway, full-path redirect state), `d5607bb` sync-step1 no longer double-unwraps the classified state vector, `c4c3e59` pen stays active after each stroke, `6b36cf4` dashboard three-dot menu no longer clipped by `overflow-hidden` on the board card. Live Chrome verified: link-only guest joins `as VIEWER` and stays `Connected`, pen still `aria-pressed=true` after two strokes, all six menu items hit-testable. `pnpm lint/typecheck/build/test` all green; worktree clean.                                                                                                                                                                                         |
+| 2026-11-22 | canvas/share                 | done                          | Three commits (`86b244d`, `8959338`, `016b0a6`). Root cause of typing/move-disappearance found: `upsertElements` iterated an unintegrated `Y.Map`, which reports no keys, so every update erased all element fields. Replaced with plain encoded field objects + stale empty-map cleanup. Also restored selected-shape handlers/focus, added finite transform guards, bounded WebP inline image fallback when MinIO is unavailable, collaborative code blocks, no-login watch links with watcher cursors/selections/avatars hidden, explicit edit grants for registered users, and live role-upgrade frames. Browser-verified sticky/code typing, rectangle move persistence, image fallback, watch link read-only UI, edit-grant UI + API membership, and WS `role_upgraded` frame. `pnpm lint/typecheck/build/test` all green.              |
+| 2026-11-22 | syntax/presence/presentation | done                          | Three commits (`a18884a`, `dfc5ab4`, `747c7cc`). Added dependency-free code tokenizer + token colors for on-canvas code and the transparent editor overlay; client stops broadcasting viewer cursors and the server strips `cursor`/selection and stamps the authenticated role into awareness frames; presenting now publishes the current camera in the same awareness frame and followers apply it immediately (including when both tabs use the same account). Live Chrome verified: editor shows all five palette colors with hidden textarea text and canvas pixels match the palette; raw WS viewer state arrives as `role: VIEWER` with no cursor and empty selection; owner zoom 146% → viewer 146% and `Following` true immediately after Present. `pnpm lint/typecheck/build/test` all green (11 shared + 3 web + 1 server tests). |
 
 ## Architecture decisions (ADRs)
 
@@ -119,21 +123,24 @@ git log --oneline
          incompatible with server templates and `replaceBoardState`)
    - [x] Client share-token plumbing (`setShareToken` in api client, `?token=` on
          board routes, live role-changed handling, comment WS → `syncboard:comment` event)
-   - [x] Verify: typecheck/build/test all green. `pnpm lint` pending `@eslint/js`
-         devDep install (was missing; `pnpm add -Dw @eslint/js` running at handoff).
+   - [x] Verify: lint/typecheck/build/test all green (`@eslint/js` installed at the root).
    - [x] Atomicize WIP → 16 thematic commits (`41c1917`…`e835aea`); GUIDE's 42-commit
          granularity was collapsed because WIP arrived as one monolithic blob — App.tsx
          and CanvasStage.tsx span multiple GUIDE commits and can't be split cleanly.
-   - [ ] Optional follow-ups: add `@eslint/js` to root devDeps + rerun `pnpm lint`;
-         server/web unit+integration tests (jest specs, supertest) are still absent;
-         Playwright/k6 suites exist but can't run without Docker Hub images.
+   - [x] `@eslint/js` installed at the root; `pnpm lint` is green.
+   - [ ] Optional follow-ups: server awareness (`yjs-protocol.spec.ts`) and web tokenizer
+         (`codeHighlight.test.ts`) unit specs exist; integration (supertest), Playwright/k6
+         E2E and load suites still can't run without Docker Hub images.
 2. Run typecheck/build/unit tests; mark integration/E2E as blocked by Docker Hub 403 if still unavailable.
 3. DONE 2026-11-22: started local Postgres/Valkey from RPMs, fixed dev runtime DI issues, verified
    health endpoints + API smoke test + web server; committed `fix(api)` for the runtime fixes.
 4. DONE 2026-11-22: fixed element-field loss on every CRDT update (typing/move disappearance),
    restored focus/selection handlers, added WebP inline image fallback, collaborative code blocks,
    no-login watch links with hidden watcher pointers, and explicit registered-user edit grants.
-   Still open: server/web unit+integration tests and Docker-based E2E/load runs (Docker Hub 403).
+   Server/web unit specs now exist; still open: supertest integration and Docker-based E2E/load
+   runs (Docker Hub 403).
+5. DONE 2026-11-22: added colored code syntax, hidden viewer cursors (client + server), and
+   immediate presentation viewport sync; browser-verified all three. All checks green.
 
 ### Status note — docs/docker (2026-11-21, infra/docs agent)
 
@@ -181,6 +188,15 @@ git log --oneline
   Share modal's "Give edit access" granted `EDITOR` to a registered user (confirmed via members API),
   and a connected WS client received `{"type":"role-changed","role":"EDITOR","reason":"role_upgraded"}`.
   Invalid share token → 403, no token → 401, share token → PATCH → 401. All four checks green.
+- **Syntax, viewer cursors and presentation follow (2026-11-22):** restarted the API with the new
+  awareness sanitizer. Headless Chrome showed all five code-token colors in the editor with
+  transparent textarea text, and matching palette pixels on the Konva canvas. A raw WS client using
+  a share token (forging `role: EDITOR`, cursor, selection) receives `role: VIEWER`, no `cursor`,
+  and an empty `selection`. Two tabs on the same account: owner zoom 100% → 146%, then toggling
+  Present moved the watcher 100% → 146% within ~1.2 s with `Following` visible. That last fix
+  required removing the `presenter.user.id !== presenceUser.id` guard because `usePresence`
+  already filters the local client. `pnpm lint/typecheck/build/test` green (11 shared + 3 web + 1
+  server tests).
 
 ## Handoff instructions for next agent
 
