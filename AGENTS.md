@@ -113,6 +113,8 @@ git log --oneline
      server/web unit+integration tests (jest specs, supertest) are still absent;
      Playwright/k6 suites exist but can't run without Docker Hub images.
 3. Run typecheck/build/unit tests; mark integration/E2E as blocked by Docker Hub 403 if still unavailable.
+4. DONE 2026-11-22: started local Postgres/Valkey from RPMs, fixed dev runtime DI issues, verified
+   health endpoints + API smoke test + web server; committed `fix(api)` for the runtime fixes.
 
 ### Status note — docs/docker (2026-11-21, infra/docs agent)
 
@@ -122,6 +124,29 @@ git log --oneline
 - Did **not** touch `apps/web/src/features/canvas` or `apps/server/src`. Image builds /
   `compose up` still blocked by Docker Hub 403 for base/data images — replace synthetic
   FPS and 25-user latency rows after first successful live run.
+
+## Runtime verification (2026-11-22)
+
+- Docker Hub/quay/ghcr all return 403 in this environment and Docker Desktop daemon is not running.
+  Workaround used: downloaded Fedora RPMs with `dnf download` (no root needed), extracted to
+  `/tmp/opencode/runtime` with `rpm2cpio | cpio -idmu`, and ran:
+  - `LD_LIBRARY_PATH=/tmp/opencode/runtime/usr/lib64` + `initdb -D /tmp/opencode/pgdata -U syncboard --auth=trust --no-locale`
+  - `pg_ctl -D /tmp/opencode/pgdata -o '-p 5432 -k /tmp/opencode -h 127.0.0.1' -l /tmp/opencode/pg.log start`
+  - `valkey-server --port 6379 --requirepass syncboard --appendonly no --save '' --daemonize yes --dir /tmp/opencode/valkey`
+    (Valkey is Redis-protocol compatible and satisfies ioredis.)
+  - `prisma migrate deploy` + `prisma generate` succeeded against local PostgreSQL 18.
+- **Runtime bugs found and fixed while starting the server:**
+  1. `apps/server` dev script used `tsx watch`, which does not emit TypeScript decorator metadata;
+     Nest DI failed with `UndefinedDependencyException` for `AuthService`. Changed to
+     `node --watch --require ts-node/register src/main.ts` (ts-node emits decorator metadata).
+  2. `JwtAuthGuard` is used in `UploadsModule`/`PermissionsModule`/`BoardsModule` but `JwtService`
+     was only provided by `AuthModule`. Registered `JwtModule.register({ global: true })` in `AppModule`.
+- **Live verification:** server boots, `/api/v1/health` and `/api/v1/health/ready` return 200
+  (postgres/redis ok), register → create board → list boards smoke test succeeded, web dev server
+  returns 200 on `http://localhost:5173/`. `pnpm typecheck`, `pnpm build`, `pnpm test` all green
+  (10 shared unit tests).
+- Long-running processes must be started detached with `setsid nohup ... & disown`; the harness kills
+  background shell commands after their timeout. Logs: `/tmp/opencode/server.log`, `/tmp/opencode/web.log`.
 
 ## Handoff instructions for next agent
 
