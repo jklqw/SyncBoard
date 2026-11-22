@@ -99,6 +99,17 @@ button:disabled {
   letter-spacing: -0.02em;
 }
 
+/* Highlighted code sits behind a transparent textarea so the caret stays native. */
+.sb-code-input {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: #e4e4e7;
+}
+
+.sb-code-input::selection {
+  background: rgb(37 99 235 / 45%);
+}
+
 .sb-pill {
   display: flex;
   align-items: center;
@@ -129,7 +140,10 @@ button:disabled {
   font-weight: 500;
   font-size: 13px;
   padding: 7px 12px;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
   white-space: nowrap;
 }
 
@@ -188,7 +202,10 @@ button:disabled {
   background: transparent;
   color: var(--sb-secondary);
   flex: none;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 
 .sb-icon-btn:hover:not(:disabled) {

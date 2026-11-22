@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { CodeElement } from '@syncboard/shared';
 import { useViewportStore } from '../../stores/useViewportStore';
+import { CODE_TOKEN_COLORS, tokenizeCode } from './utils/codeHighlight';
 import { worldToScreen } from './utils/geometry';
 
 const LANGUAGES = [
@@ -38,9 +39,14 @@ export function CodeEditorOverlay({ element, onChange, onClose }: CodeEditorOver
     [cameraX, cameraY, cameraScale],
   );
   const ref = useRef<HTMLTextAreaElement>(null);
+  const highlightRef = useRef<HTMLPreElement>(null);
   const screen = worldToScreen({ x: element.x, y: element.y }, camera);
   const width = Math.max(element.width, 320) * camera.scale;
   const height = Math.max(element.height, 200) * camera.scale;
+  const highlighted = useMemo(
+    () => tokenizeCode(element.text, element.language),
+    [element.text, element.language],
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -101,20 +107,50 @@ export function CodeEditorOverlay({ element, onChange, onClose }: CodeEditorOver
           ✕
         </button>
       </div>
-      <textarea
-        ref={ref}
-        className="sb-mono min-h-0 flex-1 resize-none border-none bg-transparent p-3 text-[12px] leading-relaxed outline-none"
-        value={element.text}
-        aria-label="Edit code snippet"
-        spellCheck={false}
-        onChange={(event) => onChange({ text: event.target.value })}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            event.preventDefault();
-            onClose();
-          }
-        }}
-      />
+      <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: '#18181B' }}>
+        <pre
+          ref={highlightRef}
+          aria-hidden="true"
+          className="sb-mono pointer-events-none absolute inset-0 m-0 overflow-hidden whitespace-pre p-3 text-[12px]"
+          style={{ color: '#D4D4D8', lineHeight: 1.5, tabSize: 2 }}
+        >
+          {highlighted.map((tokens, lineIndex) => (
+            <span key={lineIndex}>
+              {tokens.map((token, column) => (
+                <span key={column} style={{ color: CODE_TOKEN_COLORS[token.tone] }}>
+                  {token.text}
+                </span>
+              ))}
+              {lineIndex < highlighted.length - 1 ? '\n' : null}
+            </span>
+          ))}
+        </pre>
+        <textarea
+          ref={ref}
+          className="sb-code-input sb-mono absolute inset-0 h-full w-full resize-none overflow-auto border-none bg-transparent p-3 text-[12px] outline-none"
+          style={{ lineHeight: 1.5, tabSize: 2 }}
+          value={element.text}
+          aria-label="Edit code snippet"
+          spellCheck={false}
+          wrap="off"
+          autoCapitalize="off"
+          autoComplete="off"
+          autoCorrect="off"
+          onChange={(event) => onChange({ text: event.target.value })}
+          onScroll={(event) => {
+            const highlight = highlightRef.current;
+            if (!highlight) return;
+            highlight.scrollTop = event.currentTarget.scrollTop;
+            highlight.scrollLeft = event.currentTarget.scrollLeft;
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              onClose();
+            }
+          }}
+        />
+      </div>
     </div>
   );
 }
