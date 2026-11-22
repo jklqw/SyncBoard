@@ -221,7 +221,7 @@ export class BoardsService {
     ipAddress: string | null,
     hard: boolean,
   ): Promise<{ ok: true }> {
-    const board = await this.findBoardOrThrow(boardId);
+    await this.findBoardOrThrow(boardId);
     if (hard) {
       await this.prisma.board.delete({ where: { id: boardId } });
     } else {

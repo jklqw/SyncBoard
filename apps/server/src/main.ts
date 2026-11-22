@@ -5,7 +5,6 @@ import { WsAdapter } from '@nestjs/platform-ws';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
-import { LoggerModule } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { API_PREFIX } from './common/constants/limits';
 import {

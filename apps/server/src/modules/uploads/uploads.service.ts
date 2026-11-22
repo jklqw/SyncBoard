@@ -52,7 +52,7 @@ export function sniffImageKind(buffer: Buffer): ImageKind | null {
   }
   if (startsWith(buffer, [0x47, 0x49, 0x46, 0x38])) return 'gif';
 
-  const head = buffer.subarray(0, 4096).toString('utf8').replace(/^﻿/, '').trimStart();
+  const head = buffer.subarray(0, 4096).toString('utf8').replace(/^\uFEFF/, '').trimStart();
   if (head.startsWith('<?xml') || head.startsWith('<svg') || head.startsWith('<!DOCTYPE svg')) {
     return 'svg';
   }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
 import { LoggerModule } from 'nestjs-pino';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { EnvModule } from './common/config/env.module';
@@ -32,6 +33,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
         },
       },
     }),
+    JwtModule.register({ global: true }),
     EnvModule,
     PrismaModule,
     RedisModule,
