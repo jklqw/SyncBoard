@@ -8,13 +8,23 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex h-full w-full items-center justify-center" role="status" aria-label="Loading">
+      <div
+        className="flex h-full w-full items-center justify-center"
+        role="status"
+        aria-label="Loading"
+      >
         <span className="sb-spinner" />
       </div>
     );
   }
   if (!user) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location.pathname + location.search + location.hash }}
+        replace
+      />
+    );
   }
   return children;
 }

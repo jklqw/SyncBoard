@@ -50,6 +50,7 @@ interface SocketMeta {
   room: Room;
   userId: string;
   role: Role;
+  shareToken?: string | undefined;
   tokens: number;
   lastRefill: number;
   lastRoleCheck: number;
@@ -164,12 +165,14 @@ export class CollabService implements OnModuleDestroy {
     room: Room,
     userId: string,
     role: Role,
+    shareToken?: string | undefined,
   ): Promise<void> {
     const now = Date.now();
     const meta: SocketMeta = {
       room,
       userId,
       role,
+      shareToken,
       tokens: WS_TOKEN_BUCKET_CAPACITY,
       lastRefill: now,
       lastRoleCheck: now,
@@ -186,9 +189,7 @@ export class CollabService implements OnModuleDestroy {
     socket.send(
       Buffer.from(
         encodeAwarenessMessage(
-          encodeAwarenessUpdate(room.awareness, [
-            ...room.awareness.getStates().keys(),
-          ]),
+          encodeAwarenessUpdate(room.awareness, [...room.awareness.getStates().keys()]),
         ),
       ),
     );
@@ -203,9 +204,7 @@ export class CollabService implements OnModuleDestroy {
 
     if (meta.clientIds.size > 0) {
       removeAwarenessStates(room.awareness, [...meta.clientIds], socket);
-      const update = encodeAwarenessUpdate(room.awareness, [
-        ...room.awareness.getStates().keys(),
-      ]);
+      const update = encodeAwarenessUpdate(room.awareness, [...room.awareness.getStates().keys()]);
       this.broadcastToRoom(room, Buffer.from(encodeAwarenessMessage(update)));
     }
 
@@ -273,16 +272,18 @@ export class CollabService implements OnModuleDestroy {
     const decision = decideYjsMessageAllowance(meta.role, message);
     if (!decision.allow) {
       await this.auditViolation(meta, decision.reason ?? 'denied', message.kind);
-      socket.send(
-        JSON.stringify({ type: 'error', code: 'READ_ONLY', message: decision.reason }),
-      );
+      socket.send(JSON.stringify({ type: 'error', code: 'READ_ONLY', message: decision.reason }));
       return;
     }
 
     const now = Date.now();
     if (now - meta.lastRoleCheck > WS_RECHECK_INTERVAL_MS) {
       meta.lastRoleCheck = now;
-      const freshRole = await this.permissions.getRole(meta.userId, meta.room.boardId);
+      const freshRole = await this.permissions.getRole(
+        meta.userId,
+        meta.room.boardId,
+        meta.shareToken,
+      );
       if (!freshRole) {
         await this.auditViolation(meta, 'role-revoked', 'periodic-check');
         socket.close(1008, 'Access revoked');
@@ -300,10 +301,7 @@ export class CollabService implements OnModuleDestroy {
 
     if (message.kind === 'sync-step1') {
       const decoder = decoding.createDecoder(update);
-      const reply = encodeSyncReplyToStep1(
-        room.doc,
-        decoding.readVarUint8Array(decoder),
-      );
+      const reply = encodeSyncReplyToStep1(room.doc, decoding.readVarUint8Array(decoder));
       socket.send(Buffer.from(reply));
       return;
     }
@@ -355,11 +353,7 @@ export class CollabService implements OnModuleDestroy {
     }
   }
 
-  private broadcastToRoom(
-    room: Room,
-    data: Uint8Array,
-    exclude?: WebSocket,
-  ): void {
+  private broadcastToRoom(room: Room, data: Uint8Array, exclude?: WebSocket): void {
     const payload = Buffer.from(data);
     for (const client of room.sockets) {
       if (client !== exclude && client.readyState === WebSocket.OPEN) {
@@ -398,9 +392,7 @@ export class CollabService implements OnModuleDestroy {
       update: Buffer.from(update).toString('base64'),
     };
     const channel =
-      kind === 'update'
-        ? roomUpdatesChannel(room.boardId)
-        : roomAwarenessChannel(room.boardId);
+      kind === 'update' ? roomUpdatesChannel(room.boardId) : roomAwarenessChannel(room.boardId);
     await this.redis.pub.publish(channel, JSON.stringify(envelope));
   }
 
@@ -539,9 +531,6 @@ export class CollabService implements OnModuleDestroy {
       kind: 'comment',
       framed: framed.toString('base64'),
     };
-    void this.redis.pub.publish(
-      roomCommentsChannel(boardId),
-      JSON.stringify(envelope),
-    );
+    void this.redis.pub.publish(roomCommentsChannel(boardId), JSON.stringify(envelope));
   }
 }

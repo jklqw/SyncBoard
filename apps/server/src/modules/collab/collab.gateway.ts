@@ -21,6 +21,7 @@ interface SocketConnectionContext {
   boardId: string;
   userId: string;
   role: Role;
+  shareToken?: string | undefined;
 }
 
 type AuthenticatedSocket = WsClient & {
@@ -58,11 +59,7 @@ export class CollabGateway
   private readonly logger = new Logger(CollabGateway.name);
   private wss!: WebSocketServer;
   private httpServer!: HttpServer;
-  private upgradeHandler?: (
-    request: IncomingMessage,
-    socket: Duplex,
-    head: Buffer,
-  ) => void;
+  private upgradeHandler?: (request: IncomingMessage, socket: Duplex, head: Buffer) => void;
 
   constructor(
     private readonly collab: CollabService,
@@ -73,9 +70,7 @@ export class CollabGateway
 
   afterInit(server: WebSocketServer): void {
     this.wss = server;
-    const httpServer = this.httpAdapterHost.httpAdapter?.getHttpServer() as
-      | HttpServer
-      | undefined;
+    const httpServer = this.httpAdapterHost.httpAdapter?.getHttpServer() as HttpServer | undefined;
     if (!httpServer) return;
 
     this.httpServer = httpServer;
@@ -106,7 +101,8 @@ export class CollabGateway
     }
 
     // Tickets contain a role snapshot; always prefer the current DB state.
-    const currentRole = await this.permissions.getRole(payload.userId, boardId);
+    // Link-only guests have no BoardMember row, so pass the token they used.
+    const currentRole = await this.permissions.getRole(payload.userId, boardId, payload.shareToken);
     if (!currentRole) {
       abortUpgrade(socket, HttpStatus.FORBIDDEN);
       return;
@@ -117,6 +113,7 @@ export class CollabGateway
         boardId,
         userId: payload.userId,
         role: currentRole,
+        shareToken: payload.shareToken,
       };
       this.wss.emit('connection', client, request);
     });
@@ -124,13 +121,11 @@ export class CollabGateway
 
   async handleConnection(client: unknown, request: IncomingMessage): Promise<void> {
     const socket = client as AuthenticatedSocket;
-    const context =
+    const context: SocketConnectionContext | null =
       socket.boardContext ??
       (() => {
         const parsed = parseBoardWsUrl(request.url);
-        return parsed
-          ? { boardId: parsed.boardId, userId: '', role: 'VIEWER' as Role }
-          : null;
+        return parsed ? { boardId: parsed.boardId, userId: '', role: 'VIEWER' as Role } : null;
       })();
 
     if (!context || !context.userId) {
@@ -140,7 +135,13 @@ export class CollabGateway
 
     try {
       const room = await this.collab.getRoom(context.boardId);
-      await this.collab.attachSocket(socket, room, context.userId, context.role);
+      await this.collab.attachSocket(
+        socket,
+        room,
+        context.userId,
+        context.role,
+        context.shareToken,
+      );
 
       socket.on('message', (data: RawData) => {
         void this.collab.handleMessage(socket, toBuffer(data));

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
@@ -8,10 +8,25 @@ import { applyStoredTheme, useUiStore } from '../stores/useUiStore';
 import { useAuth } from './AuthProvider';
 import { ProtectedRoute } from './ProtectedRoute';
 
+interface GuestOnlyLocationState {
+  from?: string;
+}
+
 function GuestOnly({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex h-full items-center justify-center"><span className="sb-spinner" /></div>;
-  return user ? <Navigate to="/" replace /> : children;
+  const location = useLocation();
+  if (loading)
+    return (
+      <div className="flex h-full items-center justify-center">
+        <span className="sb-spinner" />
+      </div>
+    );
+  if (!user) return children;
+  // After a successful sign-in the auth state change can render this guard
+  // before LoginPage's own navigation. Honour the original target (including
+  // share-link tokens) so we never bounce the user back to the dashboard.
+  const state = location.state as GuestOnlyLocationState | null;
+  return <Navigate to={state?.from ?? '/'} replace />;
 }
 
 export function App() {
@@ -31,8 +46,22 @@ export function App() {
   return (
     <>
       <Routes>
-        <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
-        <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
+        <Route
+          path="/login"
+          element={
+            <GuestOnly>
+              <LoginPage />
+            </GuestOnly>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestOnly>
+              <RegisterPage />
+            </GuestOnly>
+          }
+        />
         <Route
           path="/"
           element={

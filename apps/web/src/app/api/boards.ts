@@ -54,7 +54,11 @@ export const boardsApi = {
     return apiFetch<BoardSummary>(`/boards/${encodeURIComponent(id)}`);
   },
 
-  create(input: { title: string; template: BoardTemplate; folderName?: string | null }): Promise<BoardSummary> {
+  create(input: {
+    title: string;
+    template: BoardTemplate;
+    folderName?: string | null;
+  }): Promise<BoardSummary> {
     return apiFetch<BoardSummary>('/boards', {
       method: 'POST',
       body: {
@@ -67,7 +71,12 @@ export const boardsApi = {
 
   update(
     id: string,
-    patch: { title?: string; folderName?: string | null; isFavorite?: boolean; isArchived?: boolean },
+    patch: {
+      title?: string;
+      folderName?: string | null;
+      isFavorite?: boolean;
+      isArchived?: boolean;
+    },
   ): Promise<BoardSummary> {
     return apiFetch<BoardSummary>(`/boards/${encodeURIComponent(id)}`, {
       method: 'PATCH',
@@ -76,7 +85,9 @@ export const boardsApi = {
   },
 
   duplicate(id: string): Promise<BoardSummary> {
-    return apiFetch<BoardSummary>(`/boards/${encodeURIComponent(id)}/duplicate`, { method: 'POST' });
+    return apiFetch<BoardSummary>(`/boards/${encodeURIComponent(id)}/duplicate`, {
+      method: 'POST',
+    });
   },
 
   remove(id: string): Promise<void> {
@@ -84,9 +95,12 @@ export const boardsApi = {
   },
 
   wsTicket(id: string): Promise<{ ticket: string; expiresIn: number }> {
-    return apiFetch<{ ticket: string; expiresIn: number }>(`/boards/${encodeURIComponent(id)}/ws-ticket`, {
-      method: 'POST',
-    });
+    return apiFetch<{ ticket: string; expiresIn: number }>(
+      `/boards/${encodeURIComponent(id)}/ws-ticket`,
+      {
+        method: 'POST',
+      },
+    );
   },
 
   comments(id: string): Promise<CommentDto[]> {
@@ -101,10 +115,13 @@ export const boardsApi = {
   },
 
   resolveComment(id: string, commentId: string, resolved: boolean): Promise<CommentDto> {
-    return apiFetch<CommentDto>(`/boards/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`, {
-      method: 'PATCH',
-      body: { resolved },
-    });
+    return apiFetch<CommentDto>(
+      `/boards/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`,
+      {
+        method: 'PATCH',
+        body: { resolved },
+      },
+    );
   },
 
   snapshots(id: string): Promise<SnapshotDto[]> {
@@ -129,7 +146,10 @@ export const boardsApi = {
     return apiFetch<MemberDto[]>(`/boards/${encodeURIComponent(id)}/members`);
   },
 
-  addMember(id: string, input: { email?: string; username?: string; role: Role }): Promise<MemberDto> {
+  addMember(
+    id: string,
+    input: { email?: string; username?: string; role: Role },
+  ): Promise<MemberDto> {
     return apiFetch<MemberDto>(`/boards/${encodeURIComponent(id)}/members`, {
       method: 'POST',
       body: input,
@@ -137,16 +157,26 @@ export const boardsApi = {
   },
 
   updateMember(id: string, userId: string, role: Role): Promise<MemberDto> {
-    return apiFetch<MemberDto>(`/boards/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, {
-      method: 'PATCH',
-      body: { role },
-    });
+    return apiFetch<MemberDto>(
+      `/boards/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+      {
+        method: 'PATCH',
+        body: { role },
+      },
+    );
   },
 
   removeMember(id: string, userId: string): Promise<void> {
-    return apiFetch<void>(`/boards/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, {
-      method: 'DELETE',
-    });
+    return apiFetch<void>(
+      `/boards/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
+  },
+
+  getShareLink(id: string): Promise<ShareLinkDto | null> {
+    return apiFetch<ShareLinkDto | null>(`/boards/${encodeURIComponent(id)}/share-link`);
   },
 
   createShareLink(id: string, role: Exclude<Role, 'OWNER'>): Promise<ShareLinkDto> {

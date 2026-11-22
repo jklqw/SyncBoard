@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { revokeChannel } from '../../common/constants/redis-channels';
@@ -10,11 +6,7 @@ import { ROLE_RANK } from '../../common/constants/roles';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { AuditService } from '../audit/audit.service';
-import type {
-  InviteMemberDto,
-  ShareLinkDto,
-  UpdateMemberRoleDto,
-} from './dto/permissions.dto';
+import type { InviteMemberDto, ShareLinkDto, UpdateMemberRoleDto } from './dto/permissions.dto';
 
 function safeEqualHex(a: string, b: string): boolean {
   const left = Buffer.from(createHash('sha256').update(a).digest('hex'), 'hex');
@@ -31,11 +23,7 @@ export class PermissionsService {
   ) {}
 
   /** Resolve the effective role for a user on a board. */
-  async getRole(
-    userId: string,
-    boardId: string,
-    shareToken?: string,
-  ): Promise<Role | null> {
+  async getRole(userId: string, boardId: string, shareToken?: string): Promise<Role | null> {
     const board = await this.prisma.board.findUnique({
       where: { id: boardId },
       select: { ownerId: true, shareToken: true, shareRole: true },
@@ -85,12 +73,7 @@ export class PermissionsService {
     }));
   }
 
-  async invite(
-    boardId: string,
-    dto: InviteMemberDto,
-    actorId: string,
-    ipAddress: string | null,
-  ) {
+  async invite(boardId: string, dto: InviteMemberDto, actorId: string, ipAddress: string | null) {
     const email = dto.email?.trim().toLowerCase();
     const username = dto.username?.trim();
     if (!email && !username) {
@@ -99,10 +82,7 @@ export class PermissionsService {
 
     const user = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          ...(email ? [{ email }] : []),
-          ...(username ? [{ username }] : []),
-        ],
+        OR: [...(email ? [{ email }] : []), ...(username ? [{ username }] : [])],
       },
       select: {
         id: true,
@@ -240,6 +220,20 @@ export class PermissionsService {
     return { ok: true };
   }
 
+  /** Return the active invite link, or null when sharing by link is disabled. */
+  async getShareLink(boardId: string) {
+    const board = await this.prisma.board.findUnique({
+      where: { id: boardId },
+      select: { shareToken: true, shareRole: true },
+    });
+    if (!board?.shareToken) return null;
+    return {
+      token: board.shareToken,
+      url: `/board/${boardId}?token=${encodeURIComponent(board.shareToken)}`,
+      role: board.shareRole,
+    };
+  }
+
   async createShareLink(
     boardId: string,
     dto: ShareLinkDto,
@@ -252,10 +246,12 @@ export class PermissionsService {
       where: { id: boardId },
       data: { shareToken: token, shareRole: dto.role },
     });
-    await this.audit.log(
-      rotate ? 'BOARD_SHARE_LINK_ROTATED' : 'BOARD_SHARE_LINK_CREATED',
-      { actorId, boardId, ipAddress, metadata: { role: dto.role } },
-    );
+    await this.audit.log(rotate ? 'BOARD_SHARE_LINK_ROTATED' : 'BOARD_SHARE_LINK_CREATED', {
+      actorId,
+      boardId,
+      ipAddress,
+      metadata: { role: dto.role },
+    });
     return {
       token,
       url: `/board/${boardId}?token=${encodeURIComponent(token)}`,

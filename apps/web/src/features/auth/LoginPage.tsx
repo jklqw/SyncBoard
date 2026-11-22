@@ -40,7 +40,12 @@ export function LoginPage() {
       footer={
         <span>
           New to SyncBoard?{' '}
-          <Link to="/register" className="font-medium no-underline" style={{ color: 'var(--sb-accent)' }}>
+          <Link
+            to="/register"
+            state={location.state}
+            className="font-medium no-underline"
+            style={{ color: 'var(--sb-accent)' }}
+          >
             Create an account
           </Link>
         </span>
@@ -48,7 +53,9 @@ export function LoginPage() {
     >
       <form onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-4" noValidate>
         <div>
-          <label className="sb-label" htmlFor="login-identifier">Email or username</label>
+          <label className="sb-label" htmlFor="login-identifier">
+            Email or username
+          </label>
           <input
             id="login-identifier"
             className="sb-input"
@@ -60,7 +67,9 @@ export function LoginPage() {
           />
         </div>
         <div>
-          <label className="sb-label" htmlFor="login-password">Password</label>
+          <label className="sb-label" htmlFor="login-password">
+            Password
+          </label>
           <input
             id="login-password"
             className="sb-input"

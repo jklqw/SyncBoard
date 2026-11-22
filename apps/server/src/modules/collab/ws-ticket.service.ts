@@ -16,6 +16,8 @@ export interface WsTicketPayload {
   userId: string;
   boardId: string;
   role: Role;
+  /** Present for link-only access so the gateway can re-check the live token. */
+  shareToken?: string | undefined;
   issuedAt: number;
   expiresAt: number;
 }
@@ -43,6 +45,7 @@ export class WsTicketService {
       userId,
       boardId,
       role,
+      shareToken,
       issuedAt: now,
       expiresAt: now + WS_TICKET_TTL_SECONDS * 1000,
     };
@@ -57,11 +60,8 @@ export class WsTicketService {
   }
 
   async consume(ticket: string, boardId: string): Promise<WsTicketPayload | null> {
-    const raw = (await this.redis.client.eval(
-      CONSUME_LUA,
-      1,
-      wsTicketKey(ticket),
-    )) as string | null;
+    const raw = (await this.redis.client.eval(CONSUME_LUA, 1, wsTicketKey(ticket))) as
+      string | null;
     if (!raw) return null;
 
     try {

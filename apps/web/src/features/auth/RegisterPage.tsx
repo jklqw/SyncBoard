@@ -1,13 +1,18 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../../app/api';
 import { useAuth } from '../../app/AuthProvider';
 import { Button } from '../../components/ui';
 import { AuthLayout } from './AuthLayout';
 
+interface LocationState {
+  from?: string;
+}
+
 export function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ email: '', username: '', displayName: '', password: '' });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -22,7 +27,8 @@ export function RegisterPage() {
     setBusy(true);
     try {
       await register({ ...form, email: form.email.trim(), username: form.username.trim() });
-      navigate('/', { replace: true });
+      const state = location.state as LocationState | null;
+      navigate(state?.from ?? '/', { replace: true });
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : 'Could not create your account.');
     } finally {
@@ -37,7 +43,12 @@ export function RegisterPage() {
       footer={
         <span>
           Already have an account?{' '}
-          <Link to="/login" className="font-medium no-underline" style={{ color: 'var(--sb-accent)' }}>
+          <Link
+            to="/login"
+            state={location.state}
+            className="font-medium no-underline"
+            style={{ color: 'var(--sb-accent)' }}
+          >
             Sign in
           </Link>
         </span>
@@ -45,7 +56,9 @@ export function RegisterPage() {
     >
       <form onSubmit={(event) => void onSubmit(event)} className="flex flex-col gap-3.5" noValidate>
         <div>
-          <label className="sb-label" htmlFor="reg-name">Display name</label>
+          <label className="sb-label" htmlFor="reg-name">
+            Display name
+          </label>
           <input
             id="reg-name"
             className="sb-input"
@@ -57,7 +70,9 @@ export function RegisterPage() {
           />
         </div>
         <div>
-          <label className="sb-label" htmlFor="reg-email">Email</label>
+          <label className="sb-label" htmlFor="reg-email">
+            Email
+          </label>
           <input
             id="reg-email"
             className="sb-input"
@@ -70,7 +85,9 @@ export function RegisterPage() {
           />
         </div>
         <div>
-          <label className="sb-label" htmlFor="reg-username">Username</label>
+          <label className="sb-label" htmlFor="reg-username">
+            Username
+          </label>
           <input
             id="reg-username"
             className="sb-input"
@@ -82,7 +99,9 @@ export function RegisterPage() {
           />
         </div>
         <div>
-          <label className="sb-label" htmlFor="reg-password">Password <span className="normal-case tracking-normal">(8+ characters)</span></label>
+          <label className="sb-label" htmlFor="reg-password">
+            Password <span className="normal-case tracking-normal">(8+ characters)</span>
+          </label>
           <input
             id="reg-password"
             className="sb-input"

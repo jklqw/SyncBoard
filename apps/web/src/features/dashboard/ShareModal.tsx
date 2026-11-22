@@ -29,9 +29,12 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
   const load = useCallback(async (): Promise<void> => {
     if (!board) return;
     try {
-      const [nextMembers] = await Promise.all([boardsApi.members(board.id)]);
+      const [nextMembers, nextLink] = await Promise.all([
+        boardsApi.members(board.id),
+        boardsApi.getShareLink(board.id),
+      ]);
       setMembers(nextMembers);
-      setLink(null);
+      setLink(nextLink);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not load members.');
     }
@@ -85,20 +88,37 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
     }
   }
 
-  async function toggleLink(role: Exclude<Role, 'OWNER'>): Promise<void> {
+  async function createLink(role: Exclude<Role, 'OWNER'>): Promise<void> {
     if (!board) return;
     try {
-      if (link) {
-        await boardsApi.deleteShareLink(board.id);
-        setLink(null);
-        showToast('Invite link disabled');
-      } else {
-        setLink(await boardsApi.createShareLink(board.id, role));
-        showToast('Invite link ready');
-      }
+      setLink(await boardsApi.createShareLink(board.id, role));
+      showToast('Invite link ready');
+      onChanged?.();
+    } catch (cause) {
+      showToast(cause instanceof Error ? cause.message : 'Could not create invite link.');
+    }
+  }
+
+  async function changeLinkRole(role: Exclude<Role, 'OWNER'>): Promise<void> {
+    if (!board || link?.role === role) return;
+    try {
+      setLink(await boardsApi.createShareLink(board.id, role));
+      showToast('Invite link role updated');
       onChanged?.();
     } catch (cause) {
       showToast(cause instanceof Error ? cause.message : 'Could not update invite link.');
+    }
+  }
+
+  async function disableLink(): Promise<void> {
+    if (!board) return;
+    try {
+      await boardsApi.deleteShareLink(board.id);
+      setLink(null);
+      showToast('Invite link disabled');
+      onChanged?.();
+    } catch (cause) {
+      showToast(cause instanceof Error ? cause.message : 'Could not disable invite link.');
     }
   }
 
@@ -129,7 +149,9 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
       ) : (
         <div className="flex flex-col gap-6">
           <form onSubmit={(event) => void inviteUser(event)} className="flex flex-col gap-2">
-            <label className="sb-label" htmlFor="invite-input">Invite by email or username</label>
+            <label className="sb-label" htmlFor="invite-input">
+              Invite by email or username
+            </label>
             <div className="flex gap-2">
               <input
                 id="invite-input"
@@ -157,7 +179,9 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
           </form>
 
           {error ? (
-            <p role="alert" className="text-[12px]" style={{ color: 'var(--sb-danger)' }}>{error}</p>
+            <p role="alert" className="text-[12px]" style={{ color: 'var(--sb-danger)' }}>
+              {error}
+            </p>
           ) : null}
 
           <div>
@@ -167,11 +191,17 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
                 <p className="sb-hint">No members yet — only you can access this board.</p>
               ) : (
                 members.map((member) => (
-                  <div key={member.userId} className="flex items-center gap-2.5 rounded-lg px-1 py-1.5">
+                  <div
+                    key={member.userId}
+                    className="flex items-center gap-2.5 rounded-lg px-1 py-1.5"
+                  >
                     <Avatar name={member.displayName} color={member.avatarColor} size={28} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-medium">{member.displayName}</div>
-                      <div className="truncate text-[11px]" style={{ color: 'var(--sb-secondary)' }}>
+                      <div
+                        className="truncate text-[11px]"
+                        style={{ color: 'var(--sb-secondary)' }}
+                      >
                         {member.email || `@${member.username}`}
                       </div>
                     </div>
@@ -180,7 +210,11 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
                     ) : (
                       <>
                         <Dropdown
-                          trigger={<Button size="sm" aria-label={`Role for ${member.displayName}`}>{member.role.toLowerCase()}</Button>}
+                          trigger={
+                            <Button size="sm" aria-label={`Role for ${member.displayName}`}>
+                              {member.role.toLowerCase()}
+                            </Button>
+                          }
                           items={ASSIGNABLE.map((role) => ({
                             label: role.toLowerCase(),
                             checked: member.role === role,
@@ -209,15 +243,20 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
               <span className="text-[13px] font-medium">Shareable link</span>
             </div>
             <p className="sb-hint mt-1">
-              Anyone with the link can join with the role you choose. Links can be disabled at any time.
+              Anyone with the link can join with the role you choose. Links can be disabled at any
+              time.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <Dropdown
-                trigger={<Button size="sm" aria-label="Invite link role">{link?.role ?? 'viewer'}</Button>}
+                trigger={
+                  <Button size="sm" aria-label="Invite link role">
+                    {link?.role ?? 'viewer'}
+                  </Button>
+                }
                 items={LINK_ROLES.map((role) => ({
                   label: role.toLowerCase(),
                   checked: link?.role === role,
-                  onSelect: () => void toggleLink(role),
+                  onSelect: () => void changeLinkRole(role),
                 }))}
               />
               {link ? (
@@ -231,12 +270,12 @@ export function ShareModal({ board, open, onClose, onChanged }: ShareModalProps)
                   <Button size="sm" onClick={() => void copyLink()} aria-label="Copy invite link">
                     <Copy size={14} /> Copy
                   </Button>
-                  <Button size="sm" variant="danger" onClick={() => void toggleLink('VIEWER')}>
+                  <Button size="sm" variant="danger" onClick={() => void disableLink()}>
                     Disable
                   </Button>
                 </>
               ) : (
-                <Button size="sm" variant="primary" onClick={() => void toggleLink('VIEWER')}>
+                <Button size="sm" variant="primary" onClick={() => void createLink('VIEWER')}>
                   Create link
                 </Button>
               )}
