@@ -20,7 +20,13 @@ export function CommentsPanel({ boardId, role, open, onClose }: CommentsPanelPro
   const draft = useUiStore((state) => state.commentDraft);
   const setCommentDraft = useUiStore((state) => state.setCommentDraft);
   const showToast = useUiStore((state) => state.showToast);
-  const camera = useViewportStore((state) => ({ x: state.x, y: state.y, scale: state.scale }));
+  const cameraX = useViewportStore((state) => state.x);
+  const cameraY = useViewportStore((state) => state.y);
+  const cameraScale = useViewportStore((state) => state.scale);
+  const camera = useMemo(
+    () => ({ x: cameraX, y: cameraY, scale: cameraScale }),
+    [cameraX, cameraY, cameraScale],
+  );
   const [body, setBody] = useState('');
   const allowed = canComment(role);
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { CanvasElement } from '@syncboard/shared';
 import { worldToScreen } from './utils/geometry';
 import { useViewportStore } from '../../stores/useViewportStore';
@@ -10,7 +10,13 @@ interface TextEditorOverlayProps {
 }
 
 export function TextEditorOverlay({ element, onChange, onClose }: TextEditorOverlayProps) {
-  const camera = useViewportStore((state) => ({ x: state.x, y: state.y, scale: state.scale }));
+  const cameraX = useViewportStore((state) => state.x);
+  const cameraY = useViewportStore((state) => state.y);
+  const cameraScale = useViewportStore((state) => state.scale);
+  const camera = useMemo(
+    () => ({ x: cameraX, y: cameraY, scale: cameraScale }),
+    [cameraX, cameraY, cameraScale],
+  );
   const ref = useRef<HTMLTextAreaElement>(null);
   const screen = worldToScreen({ x: element.x, y: element.y }, camera);
   const isSticky = element.type === 'sticky';

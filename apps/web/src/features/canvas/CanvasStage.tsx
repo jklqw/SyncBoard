@@ -124,7 +124,13 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
   const [draft, setDraft] = useState<DraftState>(null);
   const [guides] = useState<Array<{ axis: 'x' | 'y'; value: number; from: number; to: number }>>([]);
 
-  const camera = useViewportStore((state) => ({ x: state.x, y: state.y, scale: state.scale }));
+  const cameraX = useViewportStore((state) => state.x);
+  const cameraY = useViewportStore((state) => state.y);
+  const cameraScale = useViewportStore((state) => state.scale);
+  const camera = useMemo(
+    () => ({ x: cameraX, y: cameraY, scale: cameraScale }),
+    [cameraX, cameraY, cameraScale],
+  );
   const width = useViewportStore((state) => state.width);
   const height = useViewportStore((state) => state.height);
   const setSize = useViewportStore((state) => state.setSize);

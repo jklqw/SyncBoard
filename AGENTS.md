@@ -147,6 +147,13 @@ git log --oneline
   (10 shared unit tests).
 - Long-running processes must be started detached with `setsid nohup ... & disown`; the harness kills
   background shell commands after their timeout. Logs: `/tmp/opencode/server.log`, `/tmp/opencode/web.log`.
+- **Blank board page fix (2026-11-22):** headless Chrome reproduction showed React's
+  `getSnapshot should be cached` error → `Maximum update depth exceeded`. Four canvas components
+  used Zustand selectors returning a new `{x,y,scale}` object on every call. Replaced with primitive
+  subscriptions + `useMemo` in `CanvasStage`, `CommentsPanel`, `TextEditorOverlay`. Also wrapped
+  `CollabService.handleMessage` in try/catch so a malformed CRDT frame can't crash the API process.
+  Verified on a newly created board: 4 canvas layers mounted, status `Connected`, no exceptions;
+  `pnpm lint/typecheck/build/test` all still green.
 
 ## Handoff instructions for next agent
 

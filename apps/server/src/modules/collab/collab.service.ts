@@ -236,6 +236,20 @@ export class CollabService implements OnModuleDestroy {
   // ---------------------------------------------------------------- messages
 
   async handleMessage(socket: WebSocket, data: Buffer): Promise<void> {
+    try {
+      await this.processMessage(socket, data);
+    } catch (error) {
+      // A malformed CRDT frame from one client must never take down the API.
+      const reason = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Rejected malformed WS frame: ${reason}`);
+      await this.auditViolation(this.sockets.get(socket), 'malformed-frame', 'decode-error');
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close(1007, 'Invalid WebSocket frame');
+      }
+    }
+  }
+
+  private async processMessage(socket: WebSocket, data: Buffer): Promise<void> {
     const meta = this.sockets.get(socket);
     if (!meta || socket.readyState !== WebSocket.OPEN) return;
 
@@ -460,10 +474,11 @@ export class CollabService implements OnModuleDestroy {
   }
 
   private async auditViolation(
-    meta: SocketMeta,
+    meta: SocketMeta | undefined,
     reason: string,
     kind: string,
   ): Promise<void> {
+    if (!meta) return;
     const now = Date.now();
     if (now - meta.lastViolationAt < 10_000) return;
     meta.lastViolationAt = now;
