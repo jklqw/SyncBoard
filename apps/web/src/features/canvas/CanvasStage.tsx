@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type Konva from 'konva';
 import { Stage } from 'react-konva';
 import {
@@ -122,7 +115,9 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const spaceHeld = useRef(false);
   const [draft, setDraft] = useState<DraftState>(null);
-  const [guides] = useState<Array<{ axis: 'x' | 'y'; value: number; from: number; to: number }>>([]);
+  const [guides] = useState<Array<{ axis: 'x' | 'y'; value: number; from: number; to: number }>>(
+    [],
+  );
 
   const cameraX = useViewportStore((state) => state.x);
   const cameraY = useViewportStore((state) => state.y);
@@ -178,10 +173,11 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
 
   const elementsById = useMemo(() => new Map(elements.map((el) => [el.id, el])), [elements]);
   const selectedElements = useMemo(
-    () => selection.map((id) => elementsById.get(id)).filter((el): el is CanvasElement => Boolean(el)),
+    () =>
+      selection.map((id) => elementsById.get(id)).filter((el): el is CanvasElement => Boolean(el)),
     [selection, elementsById],
   );
-  const editingElement = editingId ? elementsById.get(editingId) ?? null : null;
+  const editingElement = editingId ? (elementsById.get(editingId) ?? null) : null;
 
   const viewportWorld = useMemo(
     () =>
@@ -306,7 +302,9 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
   );
 
   const pointerWorld = useCallback(
-    (event: Konva.KonvaEventObject<PointerEvent | MouseEvent | TouchEvent | WheelEvent>): Point2D => {
+    (
+      event: Konva.KonvaEventObject<PointerEvent | MouseEvent | TouchEvent | WheelEvent>,
+    ): Point2D => {
       const stage = event.target.getStage() ?? stageRef.current;
       const pos = stage?.getPointerPosition() ?? { x: 0, y: 0 };
       return snapPoint(screenToWorld(pos, useViewportStore.getState()), snapToGrid);
@@ -453,7 +451,10 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
       }
 
       if (draft.kind === 'pen') {
-        const points = [...draft.element.points, { x: world.x - draft.element.x, y: world.y - draft.element.y }];
+        const points = [
+          ...draft.element.points,
+          { x: world.x - draft.element.x, y: world.y - draft.element.y },
+        ];
         const xs = points.map((p) => p.x);
         const ys = points.map((p) => p.y);
         setDraft({
@@ -535,7 +536,17 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
         });
       }
     },
-    [draft, pointerWorld, setCursor, canWrite, spatialIndex, removeElements, panBy, lockedAspect, elements],
+    [
+      draft,
+      pointerWorld,
+      setCursor,
+      canWrite,
+      spatialIndex,
+      removeElements,
+      panBy,
+      lockedAspect,
+      elements,
+    ],
   );
 
   const onPointerUp = useCallback(() => {
@@ -561,12 +572,11 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
     }
 
     if (draft.kind === 'pen') {
+      // Keep the pen active so several strokes can be drawn in a row.
       if (draft.element.points.length >= 2) {
         upsertElements([draft.element]);
-        setSelection([draft.element.id]);
       }
       setDraft(null);
-      setTool('select');
       return;
     }
 
@@ -585,7 +595,10 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
         return;
       }
 
@@ -666,7 +679,9 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
       if (meta && key === 'g' && canWrite && selectedElements.length >= 2) {
         event.preventDefault();
         if (event.shiftKey) {
-          upsertElements(selectedElements.map((el) => ({ ...el, groupId: null, updatedAt: Date.now() })));
+          upsertElements(
+            selectedElements.map((el) => ({ ...el, groupId: null, updatedAt: Date.now() })),
+          );
         } else {
           const groupId = newId();
           upsertElements(selectedElements.map((el) => ({ ...el, groupId, updatedAt: Date.now() })));
@@ -769,7 +784,11 @@ export function CanvasStage({ boardId, stageRef }: CanvasStageProps) {
           : 'default';
 
   return (
-    <div ref={containerRef} className="absolute inset-0 overflow-hidden bg-[var(--sb-canvas)]" style={{ cursor }}>
+    <div
+      ref={containerRef}
+      className="absolute inset-0 overflow-hidden bg-[var(--sb-canvas)]"
+      style={{ cursor }}
+    >
       <Stage
         ref={stageRef}
         width={width}
