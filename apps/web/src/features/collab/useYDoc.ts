@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as Y from 'yjs';
 import RBush from 'rbush';
-import {
-  getElementBounds,
-  parseElement,
-  type CanvasElement,
-  type Rect,
-} from '@syncboard/shared';
+import { getElementBounds, parseElement, type CanvasElement, type Rect } from '@syncboard/shared';
 import { LOCAL_ORIGIN } from './types';
 
 export interface SpatialEntry extends Rect {
@@ -38,13 +33,20 @@ function decodeField(key: string, value: unknown): unknown {
   }
 }
 
-function toYMap(element: CanvasElement): Y.Map<unknown> {
-  const map = new Y.Map<unknown>();
+/** Plain encoded fields. Reading a Y.Map before it is integrated returns no entries. */
+function toFields(element: CanvasElement): ElementRecord {
+  const fields: ElementRecord = {};
   const raw = element as unknown as ElementRecord;
   for (const [key, value] of Object.entries(raw)) {
     const encoded = encodeField(key, value);
-    if (encoded !== undefined) map.set(key, encoded);
+    if (encoded !== undefined) fields[key] = encoded;
   }
+  return fields;
+}
+
+function toYMap(fields: ElementRecord): Y.Map<unknown> {
+  const map = new Y.Map<unknown>();
+  for (const [key, value] of Object.entries(fields)) map.set(key, value);
   return map;
 }
 
@@ -96,10 +98,21 @@ export function useYDoc(): YDocApi {
 
   const rebuild = useCallback(() => {
     const next: CanvasElement[] = [];
-    elementMap.forEach((map) => {
+    const invalidIds: string[] = [];
+    elementMap.forEach((map, id) => {
       const element = fromYMap(map);
       if (element) next.push(element);
+      else invalidIds.push(id);
     });
+    // Older clients could leave empty element maps behind. Drop them once so
+    // they no longer poison the spatial index or zoom-to-fit bounds.
+    if (invalidIds.length > 0) {
+      queueMicrotask(() => {
+        doc.transact(() => {
+          for (const id of invalidIds) if (elementMap.has(id)) elementMap.delete(id);
+        }, LOCAL_ORIGIN);
+      });
+    }
     next.sort((a, b) => a.zIndex.localeCompare(b.zIndex));
     spatialIndex.clear();
     spatialIndex.load(
@@ -109,7 +122,7 @@ export function useYDoc(): YDocApi {
       }),
     );
     setElements(next);
-  }, [elementMap, spatialIndex]);
+  }, [doc, elementMap, spatialIndex]);
 
   useEffect(() => {
     rebuild();
@@ -119,7 +132,10 @@ export function useYDoc(): YDocApi {
 
   useEffect(() => {
     const update = (): void => {
-      setHistory({ canUndo: undoManager.undoStack.length > 0, canRedo: undoManager.redoStack.length > 0 });
+      setHistory({
+        canUndo: undoManager.undoStack.length > 0,
+        canRedo: undoManager.redoStack.length > 0,
+      });
     };
     undoManager.on('stack-item-added', update);
     undoManager.on('stack-item-popped', update);
@@ -138,17 +154,17 @@ export function useYDoc(): YDocApi {
       if (incoming.length === 0) return;
       doc.transact(() => {
         for (const element of incoming) {
-          const next = toYMap(element);
+          const next = toFields(element);
           const existing = elementMap.get(element.id);
           if (!existing) {
-            elementMap.set(element.id, next);
+            elementMap.set(element.id, toYMap(next));
             continue;
           }
-          for (const [key, value] of next.entries()) {
+          for (const [key, value] of Object.entries(next)) {
             if (recordKey(existing.get(key)) !== recordKey(value)) existing.set(key, value);
           }
           for (const key of [...existing.keys()]) {
-            if (!next.has(key)) existing.delete(key);
+            if (!(key in next)) existing.delete(key);
           }
         }
       }, LOCAL_ORIGIN);
@@ -170,7 +186,7 @@ export function useYDoc(): YDocApi {
     (incoming: CanvasElement[]) => {
       doc.transact(() => {
         for (const id of [...elementMap.keys()]) elementMap.delete(id);
-        for (const element of incoming) elementMap.set(element.id, toYMap(element));
+        for (const element of incoming) elementMap.set(element.id, toYMap(toFields(element)));
       }, LOCAL_ORIGIN);
     },
     [doc, elementMap],
