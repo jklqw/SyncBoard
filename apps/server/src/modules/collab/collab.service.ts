@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import * as decoding from 'lib0/decoding';
 import WebSocket from 'ws';
 import * as Y from 'yjs';
 import {
@@ -300,8 +299,8 @@ export class CollabService implements OnModuleDestroy {
     const update = message.update ?? new Uint8Array();
 
     if (message.kind === 'sync-step1') {
-      const decoder = decoding.createDecoder(update);
-      const reply = encodeSyncReplyToStep1(room.doc, decoding.readVarUint8Array(decoder));
+      // The classifier already unwrapped the varUint8Array state vector.
+      const reply = encodeSyncReplyToStep1(room.doc, update);
       socket.send(Buffer.from(reply));
       return;
     }
