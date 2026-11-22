@@ -48,23 +48,24 @@ fbfa8c7 chore(repo): initialize pnpm Turborepo workspace, git hygiene, and env t
 
 **Uncommitted WIP (parallel workstreams — NOT yet split into GUIDE commits 8–42):**
 
-| Area | Status | Path notes |
-| --- | --- | --- |
-| `apps/web` scaffold, UI kit, auth/dashboard pages | partial | Has Vite/Tailwind, UI primitives, Login/Register, Dashboard, ShareModal |
-| Canvas engine | **incomplete** | Has layers/shapes/utils/stores but **MISSING** BoardPage, CanvasStage, ToolDock, tools/handlers, selection/transformer, export feature |
-| Collab client | partial | Yjs provider, awareness, offline IndexedDB hooks exist; not fully wired to a board page |
-| `apps/server` Nest modules | partial | auth/boards/permissions/collab/audit + common guards; **MISSING** `main.ts`, `app.module.ts`, health, uploads module |
-| Infra/tests/docs | partial | nginx + CI + Playwright/k6 stubs present; **done:** `apps/*/Dockerfile`, root `docker-compose.prod.yml`, `.dockerignore`, README polish; Hub 403 still blocks image pulls |
-| Engineering report §§3–8 | filled (est.) | §§3–8 written; FPS/load labeled estimated/synthetic pending live runs |
+| Area                                              | Status         | Path notes                                                                                                                                                                |
+| ------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web` scaffold, UI kit, auth/dashboard pages | partial        | Has Vite/Tailwind, UI primitives, Login/Register, Dashboard, ShareModal                                                                                                   |
+| Canvas engine                                     | **incomplete** | Has layers/shapes/utils/stores but **MISSING** BoardPage, CanvasStage, ToolDock, tools/handlers, selection/transformer, export feature                                    |
+| Collab client                                     | partial        | Yjs provider, awareness, offline IndexedDB hooks exist; not fully wired to a board page                                                                                   |
+| `apps/server` Nest modules                        | partial        | auth/boards/permissions/collab/audit + common guards; **MISSING** `main.ts`, `app.module.ts`, health, uploads module                                                      |
+| Infra/tests/docs                                  | partial        | nginx + CI + Playwright/k6 stubs present; **done:** `apps/*/Dockerfile`, root `docker-compose.prod.yml`, `.dockerignore`, README polish; Hub 403 still blocks image pulls |
+| Engineering report §§3–8                          | filled (est.)  | §§3–8 written; FPS/load labeled estimated/synthetic pending live runs                                                                                                     |
 
 ## Progress journal
 
-| Date | Phase | Status | Notes |
-| --- | --- | --- | --- |
-| 2026-11-21 | 0 | done | Commits 1–4: monorepo, specs/tooling/husky, docker-compose dev infra. |
-| 2026-11-21 | 1 | done | Commits 5–7: shared Zod schemas + geometry, Prisma schema + offline-generated init migration, report §2. |
-| 2026-11-21 | unit tests | done | Shared geometry/schema/RBAC unit tests committed (`4d108bf`). |
-| 2026-11-21 | 2–7 | **code complete, atomicized** | All WIP committed in 16 thematic commits (8 new + prior 8). Missing server bootstrap (main/app module/health/collab.module/uploads), contract mismatches (GET /boards/:id, comment/member/snapshot DTOs, share URL), WS framing bug, and Y.Doc base/props→flat schema mismatch all fixed. `pnpm install` took ~28 min (registry very slow). **Verified:** shared+server+web `tsc` clean, `pnpm build` green (web+server+shared), `pnpm test` green (10 shared unit tests; server/web have no tests yet). **NOT verified:** `pnpm lint` (@eslint/js was missing from root devDeps — install in progress), integration/E2E/load (Docker Hub 403 still blocks Postgres/Redis/MinIO). |
+| Date       | Phase      | Status                        | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------- | ---------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-21 | 0          | done                          | Commits 1–4: monorepo, specs/tooling/husky, docker-compose dev infra.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 2026-11-21 | 1          | done                          | Commits 5–7: shared Zod schemas + geometry, Prisma schema + offline-generated init migration, report §2.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-11-21 | unit tests | done                          | Shared geometry/schema/RBAC unit tests committed (`4d108bf`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 2026-11-21 | 2–7        | **code complete, atomicized** | All WIP committed in 16 thematic commits (8 new + prior 8). Missing server bootstrap (main/app module/health/collab.module/uploads), contract mismatches (GET /boards/:id, comment/member/snapshot DTOs, share URL), WS framing bug, and Y.Doc base/props→flat schema mismatch all fixed. `pnpm install` took ~28 min (registry very slow). **Verified:** shared+server+web `tsc` clean, `pnpm build` green (web+server+shared), `pnpm test` green (10 shared unit tests; server/web have no tests yet). **NOT verified:** `pnpm lint` (@eslint/js was missing from root devDeps — install in progress), integration/E2E/load (Docker Hub 403 still blocks Postgres/Redis/MinIO). |
+| 2026-11-22 | bugfixes   | done                          | Four commits after `dae432f`: `7520428` invite links survive login/register and WS role rechecks (added `GET /boards/:id/share-link`, share token in WS ticket/gateway, full-path redirect state), `d5607bb` sync-step1 no longer double-unwraps the classified state vector, `c4c3e59` pen stays active after each stroke, `6b36cf4` dashboard three-dot menu no longer clipped by `overflow-hidden` on the board card. Live Chrome verified: link-only guest joins `as VIEWER` and stays `Connected`, pen still `aria-pressed=true` after two strokes, all six menu items hit-testable. `pnpm lint/typecheck/build/test` all green; worktree clean.                             |
 
 ## Architecture decisions (ADRs)
 
@@ -88,32 +89,32 @@ git log --oneline
 
 1. **Finish critical missing app code** — mostly DONE by agent 2026-11-21 late:
    - [x] `apps/server/src/main.ts` + `app.module.ts` (helmet CSP, CORS, cookie-parser,
-     ValidationPipe whitelist, WsAdapter, pino redaction, graceful shutdown)
+         ValidationPipe whitelist, WsAdapter, pino redaction, graceful shutdown)
    - [x] `apps/server/src/modules/collab/collab.module.ts` (was imported but missing)
    - [x] `apps/server/src/modules/health/` (`/api/v1/health` + `/ready` PG/Redis checks)
    - [x] `apps/server/src/modules/uploads/` (magic-byte sniff, sharp re-encode, SVG
-     DOMPurify, MinIO/S3 PutObject; `file-type` dep removed — manual sniff instead)
+         DOMPurify, MinIO/S3 PutObject; `file-type` dep removed — manual sniff instead)
    - [x] Canvas: `BoardPage`, `CanvasStage`, `ToolDock`, shapes, layers, transformer,
-     spatial index, export — all already existed in WIP
+         spatial index, export — all already existed in WIP
    - [x] Collab provider wired into `/board/:id`; presentation/comments/version UI exist
    - [x] Contract fixes: added `GET /boards/:id`, ws-ticket shareToken passthrough,
-     comment `authorName` DTO, flat member DTOs, snapshot `boardId`, share URL `/board/`
+         comment `authorName` DTO, flat member DTOs, snapshot `boardId`, share URL `/board/`
    - [x] Fixed `YjsWebSocketProvider` framing (was sending an extra length wrapper the
-     server codec doesn't expect) + JSON control frames + multi-message frames
+         server codec doesn't expect) + JSON control frames + multi-message frames
    - [x] Rewrote `useYDoc` to flat per-field Y.Map (was `base`/`props` JSON blobs —
-     incompatible with server templates and `replaceBoardState`)
+         incompatible with server templates and `replaceBoardState`)
    - [x] Client share-token plumbing (`setShareToken` in api client, `?token=` on
-     board routes, live role-changed handling, comment WS → `syncboard:comment` event)
+         board routes, live role-changed handling, comment WS → `syncboard:comment` event)
    - [x] Verify: typecheck/build/test all green. `pnpm lint` pending `@eslint/js`
-     devDep install (was missing; `pnpm add -Dw @eslint/js` running at handoff).
+         devDep install (was missing; `pnpm add -Dw @eslint/js` running at handoff).
    - [x] Atomicize WIP → 16 thematic commits (`41c1917`…`e835aea`); GUIDE's 42-commit
-     granularity was collapsed because WIP arrived as one monolithic blob — App.tsx
-     and CanvasStage.tsx span multiple GUIDE commits and can't be split cleanly.
+         granularity was collapsed because WIP arrived as one monolithic blob — App.tsx
+         and CanvasStage.tsx span multiple GUIDE commits and can't be split cleanly.
    - [ ] Optional follow-ups: add `@eslint/js` to root devDeps + rerun `pnpm lint`;
-     server/web unit+integration tests (jest specs, supertest) are still absent;
-     Playwright/k6 suites exist but can't run without Docker Hub images.
-3. Run typecheck/build/unit tests; mark integration/E2E as blocked by Docker Hub 403 if still unavailable.
-4. DONE 2026-11-22: started local Postgres/Valkey from RPMs, fixed dev runtime DI issues, verified
+         server/web unit+integration tests (jest specs, supertest) are still absent;
+         Playwright/k6 suites exist but can't run without Docker Hub images.
+2. Run typecheck/build/unit tests; mark integration/E2E as blocked by Docker Hub 403 if still unavailable.
+3. DONE 2026-11-22: started local Postgres/Valkey from RPMs, fixed dev runtime DI issues, verified
    health endpoints + API smoke test + web server; committed `fix(api)` for the runtime fixes.
 
 ### Status note — docs/docker (2026-11-21, infra/docs agent)
